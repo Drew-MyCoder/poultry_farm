@@ -1,6 +1,7 @@
 import os
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
 # from api.auth.model import DBUser
@@ -41,6 +42,9 @@ print(f"Database URL: {database_url}")
 try:
     with engine.connect() as connection:
         print("Connected to the database")
+        # result = connection.execute(text("SELECT * FROM users LIMIT 1;"))
+        # for row in result:
+        #     print(row)
 except OperationalError as e:
     print(f"Error connecting to the database {e}" )
 
