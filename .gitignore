@@ -107,3 +107,6 @@ venv_scb/
 .mypy_cache/
 
 .idea/*
+
+
+.bash_profile
