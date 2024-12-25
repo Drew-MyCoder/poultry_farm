@@ -1,9 +1,14 @@
 import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from api.auth import router as auth_router
+from api.user.router import router as user_router
+from api.buyer.router import router as buyer_router
+from api.coop.router import router as coop_router
+from api.expenditure.router import router as expenditure_router
 from fastapi.middleware.cors import CORSMiddleware
 # import NotFoundError
+
+
 
 
 app = FastAPI(
@@ -45,5 +50,23 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 # app.add_middleware(NotFoundError)
+app.include_router(user_router)
+app.include_router(coop_router)
+app.include_router(buyer_router)
+app.include_router(expenditure_router)
+
+
+@app.get("/")
+async def read_root():
+    return "Welcome to the Farm Backend"
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="localhost",
+        port=8000,
+        reload=True,
+    )
 
 
