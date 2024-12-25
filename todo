@@ -1,0 +1,4 @@
+key points worth noting
+1. it is only an admin who can create coop, delete coop, delete buyer, update status of coop
+2. it is only feeders who can create buyer, update buyer, update coop but cant delete buyer or coop or coop status
+3. it is only egg counters who can update the egg count per coop
