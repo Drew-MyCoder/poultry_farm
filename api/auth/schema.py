@@ -7,12 +7,41 @@ class UserList(BaseModel):
     id: int = None
     email: str
     username: str
-    created_on: Optional[datetime] = None
+    # created_at: Optional[datetime] = None
     status: str = None
+    password: str
+    role: str
 
 
-class UserCreate(UserList):
-    hashed_password: str
+# class UserOutput()
+
+
+class UserCreate(BaseModel):
+    id: int 
+    email: str
+    username: str
+    password: str
+    created_at: Optional[datetime] = None
+    # hashed_password: Optional[str] = None
+
+
+class User(BaseModel):
+    id: int = None
+    username: str
+    password: str
+    email: str
+    status: str
+    created_at: datetime
+    role: str
+
+class ResetUser(BaseModel):
+    id: int = None
+    email: str
+    reset_code: str
+    status: str
+    expired: datetime
+    hashed_otp: str
+
 
 
 class ForgotPassword(BaseModel):
@@ -23,3 +52,27 @@ class ResetPassword(BaseModel):
     reset_password_token: str
     new_password: str
     confirm_password: str
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class VerificationDetails(BaseModel):
+    username: str
+    otp: str
+
+
+class UserReturn(BaseModel):
+    id: int
+    username: str
+    email: str
+    status: str
+    created_at: datetime
+    role: str
+
+
+class UserUpdate(BaseModel):
+    email: str | None = None
+    username: str | None = None
