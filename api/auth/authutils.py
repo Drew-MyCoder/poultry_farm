@@ -1,14 +1,18 @@
 import os
+import time
+import uuid
+
+from datetime import datetime, timedelta, UTC
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from jwt import PyJWTError
+from jwt import PyJWTError, ExpiredSignatureError
 from pydantic import ValidationError
 from dotenv import load_dotenv
 from . import crud, model
+from database import get_db
 
 
 load_dotenv()
@@ -17,11 +21,28 @@ load_dotenv()
 # security settings
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = os.getenv("ALGORITHM", "")
-ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
-REFRESH_TOKEN_EXPIRES_DAYS = os.getenv("REFRESH_TOKEN_EXPIRES_DAYS")
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRES_DAYS = 7
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+oauth2_scheme = OAuth2PasswordBearer("/token")
+
+credentials_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Could not validate credentials",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
+class NoMatchError(Exception):
+    pass
+
+
+class CreationError(Exception):
+    pass
 
 
 # util functions
@@ -33,20 +54,19 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-async def create_access_token(
-    *, data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    if not expires_delta:
+        expires_delta = timedelta(minutes=15)
+
+    expire: datetime = datetime.now(UTC) + expires_delta
+
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    to_encode.update({"jti": str(uuid.uuid4())})
 
+    encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
-)
+    return encode_jwt
 
 
 def get_user_token(token: str = Depends(oauth2_scheme)):
@@ -112,3 +132,89 @@ def role_required(required_role: model.DBUser.role):
             )
         return current_user
     return role_dependency
+
+
+def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(UTC) + expires_delta
+    else:
+        expire = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRES_DAYS)
+
+    to_encode.update({"exp": expire})
+    to_encode.update({"jti": str(uuid.uuid4())})
+
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return encoded_jwt
+
+
+def authenticate_user(email: str, password: str, db):
+    user = crud.get_user_by_email(email=email, db=db)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User does not exist"
+        )
+
+    if not verify_password(password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password or email not found"
+        )
+
+    return user
+
+
+def abfuscate_email(email, replacement_char="***"):
+    parts = email.split("@")
+    return f"{parts[0][:4]}{replacement_char}{parts[-1]}"
+
+
+async def validate_refresh_token(db, refresh_token) -> str:
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=ALGORITHM)
+
+        # validate expiry
+        expire = payload.get("exp")
+        if expire is None:
+            raise JWTError()
+        # convert current time to integer timestamp to enable comaprison
+        now = int(time.mktime(datetime.now(UTC).utctimetuple()))
+
+        if expire < now:
+            raise ExpiredSignatureError()
+
+        # validate jwt identifier
+        jti = payload.get("jti")
+        if jti is None:
+            raise credentials_exception
+
+        if crud.is_jti_blacklisted(jti, db):
+            raise credentials_exception
+
+        username = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+
+        return username
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=403,
+            detail="Refresh token expired."
+        )
+
+    except JWTError:
+        raise credentials_exception
+    except crud.NotFoundError as err:
+        raise HTTPException(401, err)
+
+
+def blacklist_token(token: str, db=Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+        jti = payload.get("jti", "")
+        db_jti = model.DBBlacklistedToken(jti)
+        crud.revoke_jti(db_jti=db_jti, db=db)
+    except JWTError:
+        raise credentials_exception
