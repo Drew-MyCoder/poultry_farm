@@ -8,48 +8,52 @@ from fastapi import APIRouter, Depends, HTTPException
 router = APIRouter(prefix="/coops", tags=["Coops"])
 
 
-@router.post("coop")
+@router.post("coop", response_model=schema.Coop)
 async def create_new_coop(
-    feed_detail: schema.CoopCreate, db=Depends(get_db)
+    coop_detail: schema.CoopCreate, db=Depends(get_db)
 ) -> schema.Coop:
     try:
-        new_feed = model.DBCoops(
-            user_id=feed_detail.user_id,
+        new_coop = model.DBCoops(
+            # id=coop_detail.id,
+            user_id=coop_detail.user_id,
             status='active',
-            total_dead_fowls=feed_detail.total_dead_fowls,
-            total_feed=feed_detail.total_feed,
-            # total_old_fowls=feed_detail.total_old_fowls,
-            total_fowls=feed_detail.total_fowls,
-            coop_name=feed_detail.coop_name,
+            total_dead_fowls=coop_detail.total_dead_fowls,
+            total_feed=coop_detail.total_feed,
+            # total_old_fowls=coop_detail.total_old_fowls,
+            total_fowls=coop_detail.total_fowls,
+            coop_name=coop_detail.coop_name,
         )
 
-        add_new_feed = crud.create_feed(new_feed, db)
+        add_new_coop = crud.create_coop(db_coop=new_coop, db=db)
+        return add_new_coop
 
-        return{
-            "user_id": add_new_feed.user_id,
-            "id": add_new_feed.id,
-            "status": add_new_feed.status,
-            "total_dead_fowls": add_new_feed.total_dead_fowls,
-            "total_fowls": add_new_feed.total_fowls,
-            "total_feed": add_new_feed.total_feed,
-            "coop_name": add_new_feed.coop_name,
-            # "total_young_fowls": add_new_feed.total_young_fowls
-        }
+        # return{
+        #     "user_id": add_new_feed.user_id,
+        #     "id": add_new_feed.id,
+        #     "status": add_new_feed.status,
+        #     "total_dead_fowls": add_new_feed.total_dead_fowls,
+        #     "total_fowls": add_new_feed.total_fowls,
+        #     "total_feed": add_new_feed.total_feed,
+        #     "coop_name": add_new_feed.coop_name,
+        #     # "total_young_fowls": add_new_feed.total_young_fowls
+        # }
 
     except CreationError as err:
         raise HTTPException(500, err)
 
 
 @router.get("/",)
-async def get_all_coops(db=Depends(get_db)) -> list[schema.CoopOutput]:
+async def get_all_coops(db=Depends(get_db)):
     try:
-        return crud.read_coops(db)
+        db_coops = crud.read_coops(db)
+        coops = [schema.Coop(**db_coop.__dict__) for db_coop in db_coops]
+        return coops
     except NotFoundError as e:
         raise HTTPException(e, "there are no coops to display")
 
 
 @router.get("/{id: int}")
-async def get_coop_by_id(id: int, db=Depends(get_db)) -> schema.CoopOutput:
+async def get_coop_by_id(id: int, db=Depends(get_db)):
     try:
         return crud.read_coop_by_id(id, db=db)
     except NotFoundError as e:
@@ -57,7 +61,7 @@ async def get_coop_by_id(id: int, db=Depends(get_db)) -> schema.CoopOutput:
 
 
 @router.get("/{coop_name: str}")
-async def get_coop_by_coop_name(coop_name: str, db=Depends(get_db)) -> schema.CoopOutput:
+async def get_coop_by_coop_name(coop_name: str, db=Depends(get_db)):
     try:
         return crud.read_coop_by_coop_name(coop_name, db=db)
     except NotFoundError as e:
