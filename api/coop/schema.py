@@ -6,8 +6,14 @@ class CoopBase(BaseModel):
     user_id: int
 
 
-class CoopCreate(CoopBase):
-    pass
+class CoopCreate(BaseModel):
+    status: str
+    total_dead_fowls: int
+    total_feed: int
+    total_fowls: int
+    coop_name: str
+    # id: int
+    user_id: int
 
 
 class CoopStatus(BaseModel):
@@ -25,7 +31,7 @@ class CoopUpdate(BaseModel):
     coop_name: str
 
 
-class Coop(CoopBase):
+class Coop(BaseModel):
     id: int
     status: str
     coop_name: str
@@ -33,9 +39,10 @@ class Coop(CoopBase):
     total_fowls: int
     # total_old_fowls: int
     total_feed: int
+    user_id: int
 
 
-class CoopOutput(CoopBase):
+class CoopOutput(BaseModel):
     id: int
     status: str
     total_dead_fowls: int
