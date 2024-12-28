@@ -76,9 +76,11 @@ async def forgot_password(request: schema.ForgotPassword, db=Depends(get_db)):
         print('this is reset code>>>>>>>', reset_code)
 
             # send email
+        print(user_reg.username, '<<<<<<<<<')
+
         if user_reg.email:
             await otp.send_otp_to_user(
-                subject="Hello {user_reg.email}",
+                subject=f"Hello {user_reg.email}",
                 body=f"Your login OTP is {reset_code} \nDo not share this code with anyone",
                 recipient_email=user_reg.email,
             )
@@ -86,7 +88,7 @@ async def forgot_password(request: schema.ForgotPassword, db=Depends(get_db)):
         return {
             "reset_code": reset_code,
             "code": 200,
-            "message": "We've sent an email with instructions to reset your password to {email}."
+            "message": f"We've sent an email with instructions to reset your password to {email}."
         }
 
     except crud.NotFoundError as e:
@@ -113,15 +115,16 @@ async def forgot_password(request: schema.ForgotPassword, db=Depends(get_db)):
 
 
 @router.patch("/reset_password")
-async def reset_password(request: schema.ResetPassword):
+async def reset_password(request: schema.ResetPassword, db=Depends(get_db)):
     try:
         # check valid reset password token
-        reset_token = await crud.check_reset_password_token(request.reset_password_token)
-        if reset_token is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Reset password token has expired, please request a new one"
-            )
+        reset_token = crud.check_reset_password_token(reset_password_token=request.reset_password_token, db=db)
+        print(reset_token, '<<<<<<<<<<')
+        # if reset_token is None:
+        #     raise HTTPException(
+        #         status_code=404,
+        #         detail="Reset password token has expired, please request a new one"
+        #     )
 
         # check both if new and confirm passwords match
         if request.new_password != request.confirm_password:
