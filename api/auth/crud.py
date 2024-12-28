@@ -3,7 +3,7 @@ from database import get_db
 from api.auth import model, schema
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -128,3 +128,20 @@ def is_jti_blacklisted(jti: str, db: Session) -> bool:
     )
 
     return str(blacklisted_token) == jti
+
+
+def check_reset_password_token(reset_password_token: str, db: Session):
+    ten_minutes_ago = datetime.utcnow() - timedelta(minutes=10)
+
+    token = db.query(model.DBReset).filter(
+        # model.DBReset.status == '',
+        model.DBReset.reset_code == reset_password_token,
+        # model.DBReset.expired >= ten_minutes_ago
+    ).first()
+    
+    if token is None:
+        raise NotFoundError('no token was found')
+
+    print(token, 'this is token <<<<<<<<')
+    print(token.reset_code, 'this is reset code <<<<<<<')
+    return token
