@@ -50,10 +50,14 @@ def register(user: schema.UserList, db=Depends(get_db)
 @router.post("/login",)
 async def login_for_otp(form_data: schema.UserLogin, db=Depends(get_db)):
     try:
-        user = authutils.authenticate_user(
-            email=form_data.email, password=form_data.password, db=db
-        )
-        print(form_data.email, '>>>>>>>>>>>>>>>>>>>>')
+        # user = authutils.authenticate_user(
+        #     username=form_data.username, password=form_data.password, db=db
+        # )
+        # print(form_data.username, '>>>>>>>>>>>>>>>>>>>>')
+
+        user = crud.find_by_username(username=form_data.username, db=db)
+
+        print(form_data.username, '>>>>>>>>>>>>>>>>>>>>')
 
         one_time_pass = otp.generate_and_store_otp(user=user, db=db)
         if user.email:
@@ -102,6 +106,8 @@ async def verify_account_via_email(
         user_is_verified = otp.verify_otp(
             entered_otp=verification_details.otp, user=user, db=db
         )
+
+        print(user.username, '<<<<<<<<<<<<<')
 
         if user_is_verified is False:
             raise HTTPException(400, "Invalid verification code")
