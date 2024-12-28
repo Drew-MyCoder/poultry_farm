@@ -115,13 +115,11 @@ class DBCoops(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     status = Column(String, nullable=False)
     total_fowls = Column(Integer, nullable=False, default=0)
-    # total_old_fowls = Column(Integer, nullable=False, default=0)
     total_dead_fowls = Column(Integer, nullable=False, default=0)
     total_feed = Column(Integer, nullable=False, default=0)
     coop_name = Column(String, unique=True, index=True)
-    egg_count = Column(Integer)
+    egg_count = Column(Integer, default=0)
 
-    # buyers = relationship("Buyer", back_populate="coop")
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
