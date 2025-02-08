@@ -18,10 +18,11 @@ def read_users(db):
 
 
 def read_all_admin(db):
-    return db.query(
+    return (db.query(
         model.DBUser
-    ).all()
-
+    ).filter(model.DBUser.role == 'admin')
+    .all()
+    )
 
 def find_by_username(username: str, db):
     user = (
