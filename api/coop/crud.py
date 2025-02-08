@@ -27,11 +27,11 @@ def read_coop_by_coop_name(coop_name: str, db):
     return db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).first()
 
 
-def create_coop(db_coop: model.DBCoops, db: Session):
+def create_coop(db_coop: model.DBCoops, db):
     db.add(db_coop)
     db.commit()
     db.refresh(db_coop)
-    return schema.Coop(**db_coop.__dict__)
+    return db_coop
 
 
 def update_coop(db_coop: model.DBCoops, db: Session):
