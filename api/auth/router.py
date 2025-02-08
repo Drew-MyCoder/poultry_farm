@@ -34,9 +34,9 @@ def register(user: schema.UserList, db=Depends(get_db)
             # id=user.id,
             username=user.username,
             password=hashed_password,
-            status=user.status,
+            status='active',
             email=user.email,
-            role=user.role
+            role='feeder'
         )
 
         added_user = crud.create_user(db=db, db_user=db_user)
