@@ -25,6 +25,13 @@ def create_buyer(db_buyer: model.DBBuyer, db):
     return db_buyer
 
 
+def find_buyer_by_id(buyer_id: int, db):
+    if db.query(model.DBBuyer).filter(model.DBBuyer.id == buyer_id) is None:
+        raise NotFoundError('Buyer not found')
+
+    return db.query(model.DBBuyer).filter(model.DBBuyer.id == buyer_id)
+
+
 def update_buyer(db_buyer: model.DBBuyer, db: Session):
     db.commit()
     db.refresh(db_buyer)
