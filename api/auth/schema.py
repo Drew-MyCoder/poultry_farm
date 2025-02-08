@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class UserList(BaseModel):
-    id: int = None
+    # id: int = None
     email: str
     username: str
     # created_at: Optional[datetime] = None
@@ -76,3 +76,5 @@ class UserReturn(BaseModel):
 class UserUpdate(BaseModel):
     email: str | None = None
     username: str | None = None
+    status: str | None = None
+    role: str | None = None
