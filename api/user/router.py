@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from database import get_db
 from api.auth import schema, crud, authutils, otp
+from api.buyer.crud import NotFoundError
 import uuid
 
 router = APIRouter(
@@ -19,21 +20,21 @@ async def get_all_users(db=Depends(get_db)):
 @router.get("/admin")
 async def get_all_admin(db=Depends(get_db)):
     db_admin_list = crud.read_all_admin(db)
-    admin_list = [schema.UserReturn(**db_admin.__dict__) for db_admin in db_admin_list]
+    admin_list = [schema.User(**db_admin.__dict__) for db_admin in db_admin_list]
     return admin_list
 
 
-@router.patch("/users/me")
-async def update_current_user(
-    user_info: schema.UserUpdate,
-    current_user=Depends(authutils.get_current_user),
-    db=Depends(get_db),
-):
-    if user_info.username:
-        current_user.username = user_info.username
-    if user_info.email:
-        current_user.email = user_info.email
-    crud.update_user(db_user=current_user, db=db)
+# @router.patch("/users/me")
+# async def update_current_user(
+#     user_info: schema.UserUpdate,
+#     current_user=Depends(authutils.get_current_user),
+#     db=Depends(get_db),
+# ):
+#     if user_info.username:
+#         current_user.username = user_info.username
+#     if user_info.email:
+#         current_user.email = user_info.email
+#     crud.update_user(db_user=current_user, db=db)
 
 
 @router.patch("/users/{user_id: int}")
@@ -44,6 +45,10 @@ async def update_user(user_id, user_info: schema.UserUpdate, db=Depends(get_db))
             db_user.username = user_info.username
         if user_info.email:
             db_user.email = user_info.email
+        if user_info.role:
+            db_user.role = user_info.role
+        if user_info.status:
+            db_user.status = user_info.status
 
         return crud.update_user(db_user=db_user, db=db)
     except crud.NotFoundError:
@@ -150,4 +155,18 @@ async def reset_password(request: schema.ResetPassword, db=Depends(get_db)):
         raise HTTPException(
             status_code=400,
             detail=f"something went wrong with the server \n{e}"
+        )
+
+
+@router.delete("/{id: int}")
+async def delete_user_by_id(id: int, db=Depends(get_db)):
+    try:
+        user = crud.find_user_by_id(user_id=id, db=db)
+        if user is None:
+            raise NotFoundError('user not found')
+        return crud.delete_user(user_id=id, db=db)
+    except NotFoundError:
+        raise HTTPException(
+            404,
+            'user with this id does not exist'
         )
