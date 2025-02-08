@@ -7,7 +7,7 @@ class ExpenditureBase(BaseModel):
 
 
 class ExpenditureCreate(ExpenditureBase):
-    id: int
+    # id: int
     amount: int
     reference: str
 
