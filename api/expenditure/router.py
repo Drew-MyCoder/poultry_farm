@@ -14,7 +14,7 @@ async def create_new_expenditure(
 ) -> schema.Expenditure:
     try:
         new_expenditure = model.DBExpenditure(
-            id=expenditure_detail.id,
+            # id=expenditure_detail.id,
             amount=expenditure_detail.amount,
             reference=expenditure_detail.reference,
             user_id=expenditure_detail.user_id,
