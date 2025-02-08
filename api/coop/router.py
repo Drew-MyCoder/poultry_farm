@@ -1,6 +1,7 @@
-from api.auth import model
+from api.auth import model, utils
 from api.coop import schema, crud
 from api.buyer.crud import NotFoundError, CreationError
+from api.user.crud import read_role
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -13,6 +14,9 @@ async def create_new_coop(
     coop_detail: schema.CoopCreate, db=Depends(get_db)
 ) -> schema.Coop:
     try:
+        # check if user is admin
+        is_admin = utils.admin_status(user_id=coop_detail.user_id, db=db)
+        
         new_coop = model.DBCoops(
             # id=coop_detail.id,
             user_id=coop_detail.user_id,
@@ -23,20 +27,22 @@ async def create_new_coop(
             total_fowls=coop_detail.total_fowls,
             coop_name=coop_detail.coop_name,
         )
-
+        
         add_new_coop = crud.create_coop(db_coop=new_coop, db=db)
-        return add_new_coop
+        # return add_new_coop
+        print(add_new_coop.user_id, '<<<this is the user id')
+        print(add_new_coop.id, '<<<this is the id')
 
-        # return{
-        #     "user_id": add_new_feed.user_id,
-        #     "id": add_new_feed.id,
-        #     "status": add_new_feed.status,
-        #     "total_dead_fowls": add_new_feed.total_dead_fowls,
-        #     "total_fowls": add_new_feed.total_fowls,
-        #     "total_feed": add_new_feed.total_feed,
-        #     "coop_name": add_new_feed.coop_name,
-        #     # "total_young_fowls": add_new_feed.total_young_fowls
-        # }
+        return{
+            "user_id": add_new_coop.user_id,
+            "id": add_new_coop.id,
+            "status": 'active',
+            "total_dead_fowls": add_new_coop.total_dead_fowls,
+            "total_fowls": add_new_coop.total_fowls,
+            "total_feed": add_new_coop.total_feed,
+            "coop_name": add_new_coop.coop_name,
+            # "total_young_fowls": add_new_feed.total_young_fowls
+        }
 
     except CreationError as err:
         raise HTTPException(500, err)
@@ -85,7 +91,8 @@ async def daily_coop_update_by_id(
     id: int, update_coop: schema.CoopUpdate, db=Depends(get_db)
 ):
     try:
-        coop = crud.find_coop_by_id(id, db)
+        coop = crud.find_coop_by_id(coop_id=id, db=db)
+        print(coop, '<<<<this is the coop')
         if update_coop.total_fowls:
             coop.total_fowls = update_coop.total_fowls
         if update_coop.total_dead_fowls:
@@ -103,35 +110,35 @@ async def daily_coop_update_by_id(
     return crud.update_coop(db_coop=coop, db=db)
 
 
-@router.patch("/{id: int}", response_model=schema.CoopStatus)
-async def update_coop_status_by_id(
-    id: int, update_coop: schema.CoopStatus, db=Depends(get_db)
-):
-    try:
-        coop = crud.find_coop_by_id(id, db)
-        if update_coop.status:
-            coop.status = update_coop.status
+# @router.patch("/{id: int}", response_model=schema.CoopStatus)
+# async def update_coop_status_by_id(
+#     id: int, update_coop: schema.CoopStatus, db=Depends(get_db)
+# ):
+#     try:
+#         coop = crud.find_coop_by_id(id, db)
+#         if update_coop.status:
+#             coop.status = update_coop.status
     
-    except NotFoundError:
-        raise HTTPException(
-            404, "coop with this id cannot be updated"
-        )
+#     except NotFoundError:
+#         raise HTTPException(
+#             404, "coop with this id cannot be updated"
+#         )
 
-    return crud.update_coop(db_coop=coop, db=db)
+#     return crud.update_coop(db_coop=coop, db=db)
 
 
-@router.patch("/{id: int}", response_model=schema.CoopEgg)
-async def update_coop_egg_by_id(
-    id: int, update_coop: schema.CoopEgg, db=Depends(get_db)
-):
-    try:
-        coop = crud.find_coop_by_id(id, db)
-        if update_coop.egg_count:
-            coop.egg_count = update_coop.egg_count
+# @router.patch("/{id: int}", response_model=schema.CoopEgg)
+# async def update_coop_egg_by_id(
+#     id: int, update_coop: schema.CoopEgg, db=Depends(get_db)
+# ):
+#     try:
+#         coop = crud.find_coop_by_id(id, db)
+#         if update_coop.egg_count:
+#             coop.egg_count = update_coop.egg_count
     
-    except NotFoundError:
-        raise HTTPException(
-            404, "coop with this id cannot be updated"
-        )
+#     except NotFoundError:
+#         raise HTTPException(
+#             404, "coop with this id cannot be updated"
+#         )
 
-    return crud.update_coop(db_coop=coop, db=db)
+#     return crud.update_coop(db_coop=coop, db=db)
