@@ -6,7 +6,7 @@ class BuyerBase(BaseModel):
     id: int
 
 
-class BuyerCreate(BuyerBase):
+class BuyerCreate(BaseModel):
     name: str
     date_of_delivery: datetime
     crates_desired: int
