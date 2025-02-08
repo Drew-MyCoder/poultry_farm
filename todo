@@ -2,3 +2,9 @@ key points worth noting
 1. it is only an admin who can create coop, delete coop, delete buyer, update status of coop
 2. it is only feeders who can create buyer, update buyer, update coop but cant delete buyer or coop or coop status
 3. it is only egg counters who can update the egg count per coop
+4. bugs to fix:
+- id should be appended after creation
+5. when search by name, should return all names not just first name
+6. handle errrors appropriately
+7. create a database for all customers
+8. updated at isn't working properly esp in the users update
