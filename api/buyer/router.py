@@ -8,13 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException
 router = APIRouter(prefix="/buyers", tags=["Buyers"])
 
 
-@router.post("buyer")
+@router.post("/buyer")
 async def create_new_buyer(
     buyer_detail: schema.BuyerCreate, db=Depends(get_db)
 ) -> schema.Buyer:
     try:
         new_buyer = model.DBBuyer(
-            id=buyer_detail.id,
+            # id=buyer_detail.id,
             name=buyer_detail.name,
             crates_desired=buyer_detail.crates_desired,
             date_of_delivery=buyer_detail.date_of_delivery,
@@ -58,7 +58,7 @@ async def get_buyer_by_name(buyer_name: str, db=Depends(get_db)) -> schema.Buyer
     try:
         return crud.read_buyer_by_name(buyer_name, db=db)
     except NotFoundError as e:
-        raise HTTPException(e, "coop does not exist")
+        raise HTTPException(e, "buyer does not exist")
 
 
 @router.delete("/{id: int}")
