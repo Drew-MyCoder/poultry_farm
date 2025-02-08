@@ -112,7 +112,7 @@ class DBCoops(Base):
     __tablename__ = "coop"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False)
     total_fowls = Column(Integer, nullable=False, default=0)
     total_dead_fowls = Column(Integer, nullable=False, default=0)
