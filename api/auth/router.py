@@ -50,10 +50,6 @@ def register(user: schema.UserList, db=Depends(get_db)
 @router.post("/login",)
 async def login_for_otp(form_data: schema.UserLogin, db=Depends(get_db)):
     try:
-        # user = authutils.authenticate_user(
-        #     username=form_data.username, password=form_data.password, db=db
-        # )
-        # print(form_data.username, '>>>>>>>>>>>>>>>>>>>>')
 
         user = crud.find_by_username(username=form_data.username, db=db)
 
@@ -170,7 +166,7 @@ async def refresh_access_token_endpoint(
 
         return {
             "access_token": access_token,
-            "token)type": "bearer",
+            "token_type": "bearer",
             "user": username,
             "roles": role
         }
