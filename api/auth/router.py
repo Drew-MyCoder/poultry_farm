@@ -62,7 +62,9 @@ async def login_for_otp(form_data: schema.UserLogin, db=Depends(get_db)):
                 body=f"Your login OTP is {one_time_pass} \nDo not share this code with anyone",
                 recipient_email=user.email,
             )
+            print(one_time_pass)
         email = authutils.abfuscate_email(user.email)
+        print(one_time_pass)
         return {
             "user": user.username,
             "message": f"Enter the 6-digit verification sent to {email}",
@@ -99,10 +101,13 @@ async def verify_account_via_email(
     try:
         user = crud.find_by_username(username=verification_details.username, db=db)
 
+        if not user:
+            print("User not found:", verification_details.username) 
+
         user_is_verified = otp.verify_otp(
             entered_otp=verification_details.otp, user=user, db=db
         )
-
+        print("OTP verification result:", user_is_verified) 
         print(user.username, '<<<<<<<<<<<<<')
 
         if user_is_verified is False:
@@ -141,7 +146,8 @@ async def verify_account_via_email(
         #     status_code=404,
         #     detail="User verification failed",
         # ) from e
-        print(e, ">>>>>>>>> here")
+        print("Database error:", str(e))
+        raise HTTPException(status_code=500, detail="Internal Server Error")
         
 
 
