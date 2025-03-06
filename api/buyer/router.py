@@ -1,8 +1,9 @@
-from api.auth import model
+from api.auth import model, crud as auth_crud, authutils
 from api.buyer import schema, crud
 from api.buyer.crud import NotFoundError, CreationError
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException
+
 
 
 router = APIRouter(prefix="/buyers", tags=["Buyers"])
@@ -10,9 +11,16 @@ router = APIRouter(prefix="/buyers", tags=["Buyers"])
 
 @router.post("/buyer")
 async def create_new_buyer(
-    buyer_detail: schema.BuyerCreate, db=Depends(get_db)
+    buyer_detail: schema.BuyerCreate, 
+    db=Depends(get_db),
+    role: str = Depends(authutils.get_current_user)
 ) -> schema.Buyer:
     try:
+         # CHECK TO SEE IF ROLE IS ROLE
+        if role != "feeder":
+            raise HTTPException(status_code=404,
+            detail='you are not authorized to create a buyer')
+            
         new_buyer = model.DBBuyer(
             # id=buyer_detail.id,
             name=buyer_detail.name,
@@ -78,21 +86,22 @@ async def update_buyer_by_id(
     id: int, update_buyer: schema.BuyerUpdate, db=Depends(get_db)
 ):
     try:
-        buyer = crud.find_buyer_by_id(id, db)
-        if update_buyer.amount:
-            buyer.amount = update_buyer.amount
-        if update_buyer.crates_desired:
-            buyer.crates_desired = update_buyer.crates_desired
-        if update_buyer.date_of_delivery:
-            buyer.date_of_delivery = update_buyer.date_of_delivery
-        if update_buyer.status_of_delivery:
-            buyer.status_of_delivery = update_buyer.status_of_delivery
+        buyer = crud.find_buyer_by_id(buyer_id=id, db=db)
+
+        if not buyer:
+            raise HTTPException(404, "Buyer with this ID not found")
+
+        update_data = update_buyer.dict(exclude_unset=True)  # Exclude fields not provided
+        updated_buyer = crud.update_buyer(buyer_id=id, updated_data=update_data, db=db)
+        return updated_buyer
 
     except NotFoundError:
         raise HTTPException(
-            404, "coop with this id cannot be updated"
+            404, "buyer with this id cannot be updated"
         )
 
-    return crud.update_buyer(db_buyer=buyer, db=db)
+    return crud.update_buyer(buyer_id=id, updated_data=update_buyer.dict(exclude_unset=True), db=db)
+
+
 
 
