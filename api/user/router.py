@@ -11,56 +11,57 @@ router = APIRouter(
 
 
 @router.get("/users")
-async def get_all_users(db=Depends(get_db)):
-    db_users = crud.read_users(db)
-    users = [schema.User(**db_user.__dict__) for db_user in db_users]
-    return users
+async def get_all_users(db=Depends(get_db)) -> list[schema.UserReturn]:
+    try:
+        # db_users = crud.read_users(db)
+        # users = [schema.User(**db_user.__dict__) for db_user in db_users]
+        # return users
+        return crud.read_users(db)
+    except NotFoundError as e:
+        raise HTTPException(e, "there are no users to display")
 
 
 @router.get("/admin")
 async def get_all_admin(db=Depends(get_db)):
-    db_admin_list = crud.read_all_admin(db)
-    admin_list = [schema.User(**db_admin.__dict__) for db_admin in db_admin_list]
-    return admin_list
+    try:
+    # db_admin_list = crud.read_all_admin(db)
+    # admin_list = [schema.User(**db_admin.__dict__) for db_admin in db_admin_list]
+    # return admin_list
+        return crud.read_all_admin(db)
+    except NotFoundError as e:
+        raise HTTPException(e, "there are no admins to display")
 
 
-# @router.patch("/users/me")
-# async def update_current_user(
-#     user_info: schema.UserUpdate,
-#     current_user=Depends(authutils.get_current_user),
-#     db=Depends(get_db),
-# ):
-#     if user_info.username:
-#         current_user.username = user_info.username
-#     if user_info.email:
-#         current_user.email = user_info.email
-#     crud.update_user(db_user=current_user, db=db)
 
-
-@router.patch("/users/{user_id: int}")
-async def update_user(user_id, user_info: schema.UserUpdate, db=Depends(get_db)):
+@router.patch("/users/{user_id: int}", response_model=schema.UserUpdate)
+async def update_user_by_id(
+    user_id: int, 
+    user_info: schema.UserUpdate, 
+    db=Depends(get_db)):
     try:
         db_user = crud.find_user_by_id(user_id=user_id, db=db)
-        if user_info.username:
-            db_user.username = user_info.username
-        if user_info.email:
-            db_user.email = user_info.email
-        if user_info.role:
-            db_user.role = user_info.role
-        if user_info.status:
-            db_user.status = user_info.status
+        if not db_user:
+            raise HTTPException(404, 'User with this ID not found')
 
-        return crud.update_user(db_user=db_user, db=db)
+        update_data = user_info.model_dump(exclude_unset=True)
+        print(f'New received data: {update_data}')
+
+        updated_user = crud.update_user(user_id=user_id, updated_data=update_data, db=db)
+        return updated_user
+        
     except crud.NotFoundError:
         raise HTTPException(
             status_code=404,
             detail="You are trying to update a user that does not exist."
         )
 
+    return crud.update_user(user_id=user_id, updated_data=update_data.dict(exclude_unset=True), db=db)
 
-    @router.get("/users/me", response_model=schema.User)
-    async def read_current_user(current_user=Depends(authutils.get_current_user)):
-        return current_user
+
+
+@router.get("/users/me", response_model=schema.User)
+async def read_current_user(current_user=Depends(authutils.get_current_user)):
+    return current_user
 
 
 @router.post("/forgot_password")
