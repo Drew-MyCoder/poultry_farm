@@ -24,6 +24,16 @@ def read_all_admin(db):
     .all()
     )
 
+
+def read_feeder_role(db):
+    feeder =  (db.query(model.DBUser).filter(
+        model.DBUser.role == 'feeder')
+    .first())
+    print(f'feeder found: {feeder}')
+    if feeder is None:
+        return None
+    return feeder
+
 def find_by_username(username: str, db):
     user = (
         db.query(model.DBUser)
@@ -102,11 +112,22 @@ def create_user(db_user: model.DBUser, db: Session):
     return schema.User(**db_user.__dict__)
 
 
-def update_user(db_user: model.DBUser, db):
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+def update_user(db: Session, user_id: int, updated_data: dict):
+    user = db.query(model.DBUser).filter(model.DBUser.id == user_id).first()
 
+    if not user:
+        return None
+    print('received updated data', updated_data)
+    for key, value in updated_data.items():
+        # current_value = getattr(user, key, value)
+
+        if value is not None and value != 'string':
+            print(f'updating {key} to {value}')
+            setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)  # Ensure it's a model instance before refreshing
+    return user
 
 def delete_user(user_id: int, db):
     user = db.query(model.DBUser).filter(model.DBUser.id == user_id).first()
