@@ -7,4 +7,4 @@ key points worth noting
 5. when search by name, should return all names not just first name
 6. handle errrors appropriately
 7. create a database for all customers
-8. updated at isn't working properly esp in the users update
+8. updated at isn't working properly esp in the users update (fixed)
