@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
@@ -70,11 +70,15 @@ class UserReturn(BaseModel):
     email: str
     status: str
     created_at: datetime
-    role: str
+    updated_at: datetime
+    role: str   
+    password: str
 
 
 class UserUpdate(BaseModel):
-    email: str | None = None
-    username: str | None = None
-    status: str | None = None
-    role: str | None = None
+    email: Optional[str] = None  # Ensures valid email
+    username: Optional[str] = None
+    status: Optional[str] = None
+    role: Optional[str] = None
+
+
