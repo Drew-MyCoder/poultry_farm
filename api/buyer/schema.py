@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from datetime import datetime
+from typing import Optional
+from datetime import datetime, date
 
 
 class BuyerBase(BaseModel):
@@ -14,11 +15,14 @@ class BuyerCreate(BaseModel):
     status_of_delivery: str
 
 
-class BuyerUpdate(BuyerBase):
-    date_of_delivery: datetime
-    crates_desired: int
-    amount: int
-    status_of_delivery: str
+class BuyerUpdate(BaseModel):
+    amount: Optional[int] = None
+    crates_desired: Optional[int] = None
+    date_of_delivery: Optional[date] = None  # Ensure it's a `date`, not `datetime`
+    status_of_delivery: Optional[str] = None
+
+    class Config:
+        orm_mode = True
 
 
 class Buyer(BaseModel):
