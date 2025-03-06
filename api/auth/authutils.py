@@ -7,12 +7,14 @@ from datetime import datetime, timedelta, UTC
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from jwt import PyJWTError, ExpiredSignatureError
 from pydantic import ValidationError
 from dotenv import load_dotenv
 from . import crud, model
+from api.auth import schema
 from database import get_db
+from sqlalchemy.orm import Session
 
 
 load_dotenv()
@@ -54,39 +56,78 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+# def create_access_token(data: dict, expires_delta: timedelta | None = None):
+#     to_encode = data.copy()
+#     if not expires_delta:
+#         expires_delta = timedelta(minutes=15)
+
+#     expire: datetime = datetime.now(UTC) + expires_delta
+
+#     to_encode.update({"exp": expire})
+#     to_encode.update({"jti": str(uuid.uuid4())})
+
+#     encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+#     return encode_jwt
+
+def create_access_token(data: dict):
     to_encode = data.copy()
-    if not expires_delta:
-        expires_delta = timedelta(minutes=15)
-
-    expire: datetime = datetime.now(UTC) + expires_delta
-
+    
+    # Ensure 'sub' is set to email
+    if 'sub' not in to_encode:
+        to_encode['sub'] = to_encode.get('email')  # Use email as subject
+    
+    # Add role if not present
+    if 'role' not in to_encode:
+        to_encode['role'] = 'feeder'  # Default role
+    
+    # Set expiration
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
-    to_encode.update({"jti": str(uuid.uuid4())})
+    
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
-    encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-    return encode_jwt
+# In login route
+# access_token = create_access_token({
+#     "email": user.email,
+#     "sub": user.email,  # Explicitly set sub to email
+#     "role": user.role
+# })
 
 
 def get_user_token(token: str = Depends(oauth2_scheme)):
     return token
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user( 
+    request: Request, 
+    token: str = Depends(oauth2_scheme), 
+    db: Session = Depends(get_db) ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"}
     )
+    print("Request Header:", request.headers)
+    print(f"Received token: {token}")  # Debugging step
+    
+    if not token:
+        raise credentials_exception
 
     try:
+        print(f'Received token: {token}')
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         role: str = payload.get("role")
         if username is None or role is None:
             raise credentials_exception
-        return {"username": username, "role": role}
+        user = crud.find_user_by_email(db=db, email=request.email)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user  # ✅ Return the user object
+        # return {"username": username, "role": role}
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
