@@ -49,11 +49,9 @@ async def create_new_coop(
 
 
 @router.get("/",)
-async def get_all_coops(db=Depends(get_db)):
+async def get_all_coops(db=Depends(get_db)) -> list[schema.CoopOutput]:
     try:
-        db_coops = crud.read_coops(db)
-        coops = [schema.Coop(**db_coop.__dict__) for db_coop in db_coops]
-        return coops
+        return crud.read_coops(db)
     except NotFoundError as e:
         raise HTTPException(e, "there are no coops to display")
 
@@ -109,36 +107,3 @@ async def daily_coop_update_by_id(
 
     return crud.update_coop(db_coop=coop, db=db)
 
-
-# @router.patch("/{id: int}", response_model=schema.CoopStatus)
-# async def update_coop_status_by_id(
-#     id: int, update_coop: schema.CoopStatus, db=Depends(get_db)
-# ):
-#     try:
-#         coop = crud.find_coop_by_id(id, db)
-#         if update_coop.status:
-#             coop.status = update_coop.status
-    
-#     except NotFoundError:
-#         raise HTTPException(
-#             404, "coop with this id cannot be updated"
-#         )
-
-#     return crud.update_coop(db_coop=coop, db=db)
-
-
-# @router.patch("/{id: int}", response_model=schema.CoopEgg)
-# async def update_coop_egg_by_id(
-#     id: int, update_coop: schema.CoopEgg, db=Depends(get_db)
-# ):
-#     try:
-#         coop = crud.find_coop_by_id(id, db)
-#         if update_coop.egg_count:
-#             coop.egg_count = update_coop.egg_count
-    
-#     except NotFoundError:
-#         raise HTTPException(
-#             404, "coop with this id cannot be updated"
-#         )
-
-#     return crud.update_coop(db_coop=coop, db=db)
