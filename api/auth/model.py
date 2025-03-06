@@ -29,8 +29,8 @@ class DBUser(Base):
     password = Column(String)
     role = Column(String, default='feeder')
     username = Column(String)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status = Column(String, nullable=False)
     provider = Column(String, default='custom')
     hashed_otp = Column(String, default="")
@@ -166,12 +166,12 @@ class DBBuyer(Base):
     def __init__(
         self,
         id: int | None = None,
-        name: int | None = None,
-        crates_desired: str | None = None,
-        date_of_delivery: int | None = None,
+        name: str | None = None,
+        crates_desired: int | None = None,
+        date_of_delivery: str | None = None,
         amount: int | None = None,
-        status_of_delivery: int | None = None,
-        coop_id: str | None = None,
+        status_of_delivery: str | None = None,
+        coop_id: int | None = None,
     ):
         self.id = id
         self.name = name
