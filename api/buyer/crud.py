@@ -32,10 +32,21 @@ def find_buyer_by_id(buyer_id: int, db):
     return db.query(model.DBBuyer).filter(model.DBBuyer.id == buyer_id)
 
 
-def update_buyer(db_buyer: model.DBBuyer, db: Session):
+def update_buyer(db: Session, buyer_id: int, updated_data: dict):
+    buyer = db.query(model.DBBuyer).filter(model.DBBuyer.id == buyer_id).first()
+    
+    if not buyer:
+        return None  # Or raise an exception if the buyer doesn't exist
+    print('received updated data', updated_data)
+    for key, value in updated_data.items():
+        if value is not None and value != 0:
+            print(f'updating {key} to {value}')
+            setattr(buyer, key, value)
+
     db.commit()
-    db.refresh(db_buyer)
-    return db_buyer
+    db.refresh(buyer)  # Ensure it's a model instance before refreshing
+    return buyer
+
 
 
 def delete_buyer(buyer_id: int, db: Session):
