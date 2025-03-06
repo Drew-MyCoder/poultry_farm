@@ -12,7 +12,6 @@ class CoopCreate(BaseModel):
     total_feed: int
     total_fowls: int
     coop_name: str
-    # id: int
     user_id: int
 
 
@@ -37,7 +36,6 @@ class Coop(BaseModel):
     coop_name: str
     total_dead_fowls: int
     total_fowls: int
-    # total_old_fowls: int
     total_feed: int
     user_id: int
 
@@ -48,10 +46,6 @@ class CoopOutput(BaseModel):
     total_dead_fowls: int
     total_fowls: int
     coop_name: str
-    # total_old_fowls: int
     total_feed: int
     created_at: datetime
-    update_feed: datetime
-    
-
-
+    updated_at: datetime
