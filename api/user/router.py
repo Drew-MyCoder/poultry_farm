@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from database import get_db
 from api.auth import schema, crud, authutils, otp
 from api.buyer.crud import NotFoundError
@@ -61,7 +61,16 @@ async def update_user_by_id(
 
 @router.get("/users/me", response_model=schema.User)
 async def read_current_user(current_user=Depends(authutils.get_current_user)):
+    print('route accessed')
     return current_user
+
+
+@router.get("/test-auth")
+async def test_auth(request: Request):
+    print("Headers:", request.headers)
+    auth_header = request.headers.get("Authorization", "")
+    return {"received_auth": auth_header}
+
 
 
 @router.post("/forgot_password")
