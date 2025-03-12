@@ -13,13 +13,12 @@ router = APIRouter(prefix="/buyers", tags=["Buyers"])
 async def create_new_buyer(
     buyer_detail: schema.BuyerCreate, 
     db=Depends(get_db),
-    role: str = Depends(authutils.get_current_user)
 ) -> schema.Buyer:
     try:
          # CHECK TO SEE IF ROLE IS ROLE
-        if role != "feeder":
-            raise HTTPException(status_code=404,
-            detail='you are not authorized to create a buyer')
+        # if role != "feeder":
+        #     raise HTTPException(status_code=404,
+        #     detail='you are not authorized to create a buyer')
             
         new_buyer = model.DBBuyer(
             # id=buyer_detail.id,
