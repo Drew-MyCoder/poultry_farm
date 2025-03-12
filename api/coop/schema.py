@@ -49,3 +49,4 @@ class CoopOutput(BaseModel):
     total_feed: int
     created_at: datetime
     updated_at: datetime
+    egg_count: int
