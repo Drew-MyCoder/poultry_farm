@@ -113,22 +113,26 @@ async def get_current_user(
     print(f"Received token: {token}")  # Debugging step
     
     if not token:
+        print('No token received')
         raise credentials_exception
+    print(f'received token: {token}')
 
     try:
         print(f'Received token: {token}')
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print('Decoded payload: ', payload)
         username: str = payload.get("sub")
         role: str = payload.get("role")
         if username is None or role is None:
             raise credentials_exception
-        user = crud.find_user_by_email(db=db, email=request.email)
+        user = crud.find_user_by_email(db=db, email=username)
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
 
         return user  # ✅ Return the user object
         # return {"username": username, "role": role}
-    except JWTError:
+    except JWTError as e:
+        print('jwt decoding failed: ', str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
