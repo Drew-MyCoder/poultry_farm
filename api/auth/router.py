@@ -116,7 +116,7 @@ async def verify_account_via_email(
         access_token_expires = timedelta(minutes=authutils.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = authutils.create_access_token(
             data={"sub": user.username, "roles": user.role},
-            expires_delta=access_token_expires,
+            # expires_delta=access_token_expires,
         )
         new_refresh_token = authutils.create_refresh_token(
             data={"sub": user.username}
@@ -127,6 +127,7 @@ async def verify_account_via_email(
             "user": user.username,
             "roles": user.role,
             "access_token": access_token,
+            "user_id": user.id,
         }
 
         response = JSONResponse(content=response_data)
@@ -169,6 +170,7 @@ async def refresh_access_token_endpoint(
 
         access_token = authutils.create_access_token({"sub": username, "roles": role})
         print("this is the username >>>>>>>>>>", username)
+        print("this is the refresh token >>>>>>>>>>", access_token)
 
         return {
             "access_token": access_token,
