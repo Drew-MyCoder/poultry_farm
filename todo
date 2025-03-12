@@ -8,3 +8,4 @@ key points worth noting
 6. handle errrors appropriately
 7. create a database for all customers
 8. updated at isn't working properly esp in the users update (fixed)
+9. revenue can be seen by only admin
