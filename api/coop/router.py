@@ -12,10 +12,10 @@ router = APIRouter(prefix="/coops", tags=["Coops"])
 @router.post("coop", response_model=schema.Coop)
 async def create_new_coop(
     coop_detail: schema.CoopCreate, db=Depends(get_db)
-) -> schema.Coop:
+) -> schema.CoopCreate:
     try:
         # check if user is admin
-        is_admin = utils.admin_status(user_id=coop_detail.user_id, db=db)
+        # is_admin = utils.admin_status(user_id=coop_detail.user_id, db=db)
         
         new_coop = model.DBCoops(
             # id=coop_detail.id,
@@ -26,6 +26,11 @@ async def create_new_coop(
             # total_old_fowls=coop_detail.total_old_fowls,
             total_fowls=coop_detail.total_fowls,
             coop_name=coop_detail.coop_name,
+            collection_date=coop_detail.collection_date,
+            remainder_eggs=coop_detail.remainder_eggs,
+            notes=coop_detail.notes,
+            efficiency=coop_detail.efficiency,
+            egg_count=coop_detail.egg_count,
         )
         
         add_new_coop = crud.create_coop(db_coop=new_coop, db=db)
@@ -41,6 +46,11 @@ async def create_new_coop(
             "total_fowls": add_new_coop.total_fowls,
             "total_feed": add_new_coop.total_feed,
             "coop_name": add_new_coop.coop_name,
+            "collection_date": add_new_coop.collection_date,
+            "remainder_eggs": add_new_coop.remainder_eggs,
+            "notes": add_new_coop.notes,
+            "efficiency": add_new_coop.efficiency,
+            "egg_count": add_new_coop.egg_count,
             # "total_young_fowls": add_new_feed.total_young_fowls
         }
 
@@ -99,6 +109,18 @@ async def daily_coop_update_by_id(
             coop.total_feed = update_coop.total_feed
         if update_coop.coop_name:
             coop.coop_name = update_coop.coop_name
+        if update_coop.egg_count:
+            coop.egg_count = update_coop.egg_count
+        if update_coop.crates_collected:
+            coop.crates_collected = update_coop.crates_collected
+        if update_coop.remainder_eggs:
+            coop.remainder_eggs = update_coop.remainder_eggs
+        if update_coop.broken_eggs:
+            coop.broken_eggs = update_coop.broken_eggs
+        if update_coop.notes:
+            coop.notes = update_coop.notes
+        if update_coop.efficiency:
+            coop.efficiency = update_coop.efficiency
 
     except NotFoundError:
         raise HTTPException(
