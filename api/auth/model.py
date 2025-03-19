@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Enum, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Enum, DateTime, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from database import Base
 import enum
@@ -18,7 +18,7 @@ status_option = ['active', 'inactive', 'suspended']
 role_option = ['admin', 'feeder', 'counter']
 
 
-status_of_delivery = ["pending", "delivered", "cancelled"]
+status_of_delivery = ["pending", "delivered", "cancelled", "progress"]
 
 
 class DBUser(Base):
@@ -119,6 +119,12 @@ class DBCoops(Base):
     total_feed = Column(Integer, nullable=False, default=0)
     coop_name = Column(String, unique=True, index=True)
     egg_count = Column(Integer, default=0)
+    collection_date = Column(String, nullable=False)
+    crates_collected = Column(Integer, nullable=False, default=0)
+    remainder_eggs = Column(Integer, nullable=False, default=0)
+    broken_eggs = Column(Integer, nullable=False, default=0)
+    notes = Column(String, nullable=False)
+    efficiency = Column(Float, nullable=False, default=0)
 
 
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -135,6 +141,12 @@ class DBCoops(Base):
         total_feed: int | None = None,
         coop_name: str | None = None,
         egg_count: int | None = None,
+        collection_date: str | None = None,
+        crates_collected: int | None = None,
+        remainder_eggs: int | None = None,
+        broken_eggs: int | None = None,
+        notes: str | None = None,
+        efficiency: float | None = None
     ):
         self.id = id
         self.user_id = user_id
@@ -144,6 +156,12 @@ class DBCoops(Base):
         self.total_feed = total_feed
         self.coop_name = coop_name
         self.egg_count = egg_count
+        self.collection_date = collection_date
+        self.crates_collected = crates_collected
+        self.remainder_eggs = remainder_eggs
+        self.broken_eggs = broken_eggs
+        self.notes = notes
+        self.efficiency = efficiency
 
 
 class DBBuyer(Base):
@@ -152,7 +170,7 @@ class DBBuyer(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     crates_desired = Column(Integer, nullable=False, default=0)
-    date_of_delivery = Column(String, nullable=False)
+    date_of_delivery = Column(DateTime, nullable=False)
     amount = Column(Integer, nullable=False)
     status_of_delivery = Column(String, default='pending')
     coop_id = Column(Integer, ForeignKey("coop.id"))
@@ -161,6 +179,7 @@ class DBBuyer(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    by = Column(String, nullable=False)
 
 
     def __init__(
@@ -172,6 +191,7 @@ class DBBuyer(Base):
         amount: int | None = None,
         status_of_delivery: str | None = None,
         coop_id: int | None = None,
+        by: str | None = None,
     ):
         self.id = id
         self.name = name
@@ -180,6 +200,7 @@ class DBBuyer(Base):
         self.amount = amount
         self.status_of_delivery = status_of_delivery
         self.coop_id = coop_id
+        self.by = by
 
 
 class DBExpenditure(Base):
