@@ -13,6 +13,7 @@ class BuyerCreate(BaseModel):
     crates_desired: int
     amount: int
     status_of_delivery: str
+    by: str
 
 
 class BuyerUpdate(BaseModel):
@@ -28,10 +29,11 @@ class BuyerUpdate(BaseModel):
 class Buyer(BaseModel):
     id: int
     name: str
-    date_of_delivery: str
+    date_of_delivery: date
     crates_desired: int
     amount: int
     status_of_delivery: str
+    by: str
 
 
 class BuyerOutput(BaseModel):
@@ -43,3 +45,4 @@ class BuyerOutput(BaseModel):
     status_of_delivery: str
     created_at: datetime
     updated_at: datetime
+    by: str
