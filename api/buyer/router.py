@@ -27,6 +27,7 @@ async def create_new_buyer(
             date_of_delivery=buyer_detail.date_of_delivery,
             amount=buyer_detail.amount,
             status_of_delivery=buyer_detail.status_of_delivery,
+            by=buyer_detail.by,
         )
 
         add_new_feed = crud.create_buyer(new_buyer, db)
@@ -38,6 +39,7 @@ async def create_new_buyer(
             "date_of_delivery": add_new_feed.date_of_delivery,
             "amount": add_new_feed.amount,
             "status_of_delivery": add_new_feed.status_of_delivery,
+            "by": add_new_feed.by,
         }
 
     except CreationError as err:
@@ -71,7 +73,7 @@ async def get_buyer_by_name(buyer_name: str, db=Depends(get_db)) -> schema.Buyer
 @router.delete("/{id: int}")
 async def delete_buyer_by_id(id: int, db=Depends(get_db)):
     try:
-        buyer = crud.find_buyer_by_id(coop_id=id, db=db)
+        buyer = crud.find_buyer_by_id(buyer_id=id, db=db)
         if buyer is None:
             raise NotFoundError('buyer you are trying to delete does not exist')
         return crud.delete_buyer(buyer_id=id, db=db)
