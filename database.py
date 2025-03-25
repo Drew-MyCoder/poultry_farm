@@ -65,25 +65,17 @@
 
 
 import os
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
 
-# Import ALL your models here to ensure they're loaded
-from api.auth.model import (
-    DBUser, 
-    DBBlacklistedToken, 
-    DBReset, 
-    DBCoops, 
-    DBBuyer, 
-    DBExpenditure
-)
+# Import Base from the new base module
+from base import Base
 
 load_dotenv()
 
-# Database connection setup (unchanged)
+# Database connection setup
 database_name = os.getenv("DATABASE_NAME")
 database_username = os.getenv("DATABASE_USERNAME")
 database_password = os.getenv("DATABASE_PASSWORD")
@@ -101,36 +93,42 @@ engine = create_engine(
     pool_recycle=3600,   # Recycle connections after 1 hour
 )
 
-Base = declarative_base()
-
-# Debugging: Print out all tables that will be created
-print("Tables to be created:")
-for table_name in Base.metadata.tables:
-    print(f"- {table_name}")
-
-try:
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
-    print("Tables created successfully")
-
-    # Verify table creation
-    with engine.connect() as connection:
-        inspector = inspect(engine)
-        tables = inspector.get_table_names()
-        print("Existing tables:", tables)
-except Exception as e:
-    print(f"Error creating tables: {e}")
-    import traceback
-    traceback.print_exc()
-
 # Session configuration
-sessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
-    database = sessionLocal()
+    database = SessionLocal()
     try:
         yield database
     finally:
         database.close()
+
+def init_db():
+    try:
+        # Import models here to avoid circular imports
+        from api.auth.model import DBUser
+        from api.auth.model import (
+            DBBlacklistedToken, 
+            DBReset, 
+            DBCoops, 
+            DBBuyer, 
+            DBExpenditure
+        )
+        
+        # Create all tables
+        Base.metadata.create_all(bind=engine)
+        print("Tables created successfully")
+
+        # Verify table creation
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        print("Existing tables:", tables)
+    except Exception as e:
+        print(f"Error creating tables: {e}")
+        import traceback
+        traceback.print_exc()
+
+# Optionally call init_db during module import or in your main startup
+init_db()
 
 print(f"Database URL: {database_url}")

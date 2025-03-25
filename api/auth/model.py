@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Integer, Enum, DateTime, ForeignKey, Float
 from sqlalchemy.orm import relationship
-from database import Base
+from base import Base
 import enum
 from datetime import datetime, timezone
 from pydantic import validator
