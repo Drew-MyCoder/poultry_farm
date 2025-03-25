@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
 class CoopBase(BaseModel):
@@ -20,6 +21,7 @@ class CoopCreate(BaseModel):
     collection_date: datetime
     efficiency: float
     egg_count: int
+    # parent_id: int
 
 
 class CoopStatus(BaseModel):
@@ -41,10 +43,13 @@ class CoopUpdate(BaseModel):
     broken_eggs: int
     notes: str
     efficiency: float
+    status: str
+    collection_date: datetime
 
 
 class Coop(BaseModel):
     id: int
+    parent_id: Optional[int]
     status: str
     coop_name: str
     total_dead_fowls: int
@@ -56,6 +61,7 @@ class Coop(BaseModel):
 
 class CoopOutput(BaseModel):
     id: int
+    parent_id: Optional[int]
     status: str
     total_dead_fowls: int
     total_fowls: int
