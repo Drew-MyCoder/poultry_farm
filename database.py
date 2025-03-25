@@ -4,6 +4,8 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
+from api.auth.model import DBUser, DBBlacklistedToken, DBReset, DBCoops, DBBuyer, DBExpenditure  # Import all models
+
 # from api.auth.model import DBUser
 
 load_dotenv()

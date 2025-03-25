@@ -29,8 +29,8 @@ class DBUser(Base):
     password = Column(String)
     role = Column(String, default='feeder')
     username = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     status = Column(String, nullable=False)
     provider = Column(String, default='custom')
     hashed_otp = Column(String, default="")
@@ -128,8 +128,8 @@ class DBCoops(Base):
     efficiency = Column(Float, nullable=False, default=0)
 
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
     def __init__(
@@ -180,8 +180,8 @@ class DBBuyer(Base):
 
     # coop = relationship("Coop", back_populates="buyers")
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     by = Column(String, nullable=False)
 
 
@@ -212,9 +212,9 @@ class DBExpenditure(Base):
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Integer, nullable=False)
     reference = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def __init__(
         self,
