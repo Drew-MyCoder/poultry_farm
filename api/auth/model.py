@@ -112,6 +112,7 @@ class DBCoops(Base):
     __tablename__ = "coop"
 
     id = Column(Integer, primary_key=True, index=True)
+    parent_id = Column(Integer, ForeignKey("coop.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String, nullable=False)
     total_fowls = Column(Integer, nullable=False, default=0)
@@ -134,6 +135,7 @@ class DBCoops(Base):
     def __init__(
         self,
         id: int | None = None,
+        parent_id: int | None = None,
         user_id: int | None = None,
         status: str | None = None,
         total_fowls: int | None = None,
@@ -149,6 +151,7 @@ class DBCoops(Base):
         efficiency: float | None = None
     ):
         self.id = id
+        self.parent_id = parent_id
         self.user_id = user_id
         self.status = status
         self.total_fowls = total_fowls
