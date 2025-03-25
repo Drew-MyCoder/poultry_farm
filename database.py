@@ -72,7 +72,7 @@ from sqlalchemy.exc import OperationalError
 from dotenv import load_dotenv
 
 # Import ALL your models here to ensure they're loaded
-from models import (
+from api.auth.model import (
     DBUser, 
     DBBlacklistedToken, 
     DBReset, 
