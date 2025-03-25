@@ -20,11 +20,15 @@ def read_coop_by_id(coop_id: int, db):
 
 
 def read_coop_by_coop_name(coop_name: str, db):
-    coop = db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).first()
+    coop = db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).order_by(model.DBCoops.created_at.desc()).all()
     if coop is None:
         raise NotFoundError("coop not found")
 
     return db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).first()
+
+
+def read_coop_by_version(coop_id: int, db):
+    return db.query(model.DBCoops).filter(model.DBCoops.id == coop_id).first()
 
 
 def create_coop(db_coop: model.DBCoops, db):
