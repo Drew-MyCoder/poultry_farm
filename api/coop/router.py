@@ -4,6 +4,8 @@ from api.buyer.crud import NotFoundError, CreationError
 from api.user.crud import read_role
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
 
 
 router = APIRouter(prefix="/coops", tags=["Coops"])
@@ -41,6 +43,7 @@ async def create_new_coop(
         return{
             "user_id": add_new_coop.user_id,
             "id": add_new_coop.id,
+            "parent_id": add_new_coop.parent_id,
             "status": 'active',
             "total_dead_fowls": add_new_coop.total_dead_fowls,
             "total_fowls": add_new_coop.total_fowls,
@@ -74,7 +77,7 @@ async def get_coop_by_id(id: int, db=Depends(get_db)):
         raise HTTPException(e, "coop does not exist")
 
 
-@router.get("/{coop_name: str}")
+@router.get("/{coop_name: str}/history", response_model=list[schema.CoopUpdate])
 async def get_coop_by_coop_name(coop_name: str, db=Depends(get_db)):
     try:
         return crud.read_coop_by_coop_name(coop_name, db=db)
@@ -129,3 +132,91 @@ async def daily_coop_update_by_id(
 
     return crud.update_coop(db_coop=coop, db=db)
 
+
+@router.patch("/{id}", response_model=schema.CoopUpdate)
+async def update_coop(id: int, coop_update: schema.CoopUpdate, db: Session = Depends(get_db)):
+    try:
+        # fetch existing record
+        existing_coop = crud.read_coop_by_id(coop_id=id, db=db)
+
+        if not existing_coop:
+            raise HTTPException(
+                status_code=404,
+                detail="Coop record not found"
+            )
+
+        # Create a new instance with the updated values, linking to the previous version
+        new_coop = model.DBCoops(
+            parent_id=existing_coop.id,  # Link to previous version
+            user_id=existing_coop.user_id,
+            status=coop_update.status,
+            total_fowls=coop_update.total_fowls,
+            total_dead_fowls=coop_update.total_dead_fowls,
+            total_feed=coop_update.total_feed,
+            coop_name=existing_coop.coop_name,  # Keep coop_name the same
+            egg_count=coop_update.egg_count,
+            collection_date=coop_update.collection_date,
+            crates_collected=coop_update.crates_collected,
+            remainder_eggs=coop_update.remainder_eggs,
+            broken_eggs=coop_update.broken_eggs,
+            notes=coop_update.notes,
+            efficiency=coop_update.efficiency,
+        )
+
+        add_coop_update = crud.create_coop(db_coop=new_coop, db=db)
+
+        return add_coop_update
+    except CreationError as err:
+        raise HTTPException(500, err)
+
+
+@router.post("/{id}/rollback", response_model=schema.CoopUpdate)
+async def rollback_coop(id: int, db: Session = Depends(get_db)):
+    try:
+        current_version = crud.read_coop_by_id(coop_id=id, db=db)
+
+        if not current_version:
+            raise HTTPException(
+                status_code=404,
+                detail="Current version not found"
+            )
+        
+        if not current_version.parent_id:
+            raise HTTPException(
+                status_code=400,
+                detail="No previous version available for rollback"
+            )
+        
+        # find previous version
+        old_version = crud.read_coop_by_version(coop_id=current_version.parent_id, db=db)
+
+        if not old_version:
+            raise HTTPException(
+                status_code=404,
+                detail="Previous version not found"
+            )
+
+        # Create a new record with the old data (restoring it)
+        restored_coop = model.DBCoops(
+            parent_id=old_version.parent_id,  # Keep the link to the version before that
+            user_id=old_version.user_id,
+            status=old_version.status,
+            total_fowls=old_version.total_fowls,
+            total_dead_fowls=old_version.total_dead_fowls,
+            total_feed=old_version.total_feed,
+            coop_name=old_version.coop_name,
+            egg_count=old_version.egg_count,
+            collection_date=old_version.collection_date,
+            crates_collected=old_version.crates_collected,
+            remainder_eggs=old_version.remainder_eggs,
+            broken_eggs=old_version.broken_eggs,
+            notes=old_version.notes,
+            efficiency=old_version.efficiency,
+        )
+
+        rolled_back = crud.create_coop(db_coop=restored_coop, db=db)
+
+        return rolled_back
+
+    except CreationError as err:
+        raise HTTPException(500, err)
