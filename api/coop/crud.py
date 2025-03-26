@@ -22,7 +22,7 @@ def read_coop_by_id(coop_id: int, db):
 def read_coop_by_coop_name(coop_name: str, db):
     coop = db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).order_by(model.DBCoops.created_at.desc()).all()
     if coop is None:
-        raise NotFoundError("coop not found")
+        raise NotFoundError("coops not found")
 
     return db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).first()
 
