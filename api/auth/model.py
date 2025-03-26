@@ -118,7 +118,7 @@ class DBCoops(Base):
     total_fowls = Column(Integer, nullable=False, default=0)
     total_dead_fowls = Column(Integer, nullable=False, default=0)
     total_feed = Column(Integer, nullable=False, default=0)
-    coop_name = Column(String, unique=True, index=True)
+    coop_name = Column(String, index=True)
     egg_count = Column(Integer, default=0)
     collection_date = Column(String, nullable=False)
     crates_collected = Column(Integer, nullable=False, default=0)
