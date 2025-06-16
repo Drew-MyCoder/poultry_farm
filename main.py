@@ -5,6 +5,7 @@ from api.user.router import router as user_router
 from api.buyer.router import router as buyer_router
 from api.coop.router import router as coop_router
 from api.expenditure.router import router as expenditure_router
+from api.location.router import router as location_router
 from fastapi.middleware.cors import CORSMiddleware
 # import NotFoundError
 
@@ -52,6 +53,7 @@ app.include_router(user_router)
 app.include_router(coop_router)
 app.include_router(buyer_router)
 app.include_router(expenditure_router)
+app.include_router(location_router)
 
 
 @app.get("/")
