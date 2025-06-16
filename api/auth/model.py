@@ -5,19 +5,8 @@ import enum
 from datetime import datetime, timezone
 from pydantic import validator
 
-
-
 status_option = ['active', 'inactive', 'suspended']
-
-
-# class Role(enum.Enum):
-#     ADMIN = 'admin'
-#     FEEDER = 'feeder'
-#     COUNTER = 'counter'
-
 role_option = ['admin', 'feeder', 'counter']
-
-
 status_of_delivery = ["pending", "delivered", "cancelled", "progress"]
 
 
@@ -34,7 +23,10 @@ class DBUser(Base):
     status = Column(String, nullable=False)
     provider = Column(String, default='custom')
     hashed_otp = Column(String, default="")
-
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
+    
+    # Fixed relationship with explicit foreign_keys
+    location = relationship("DBLocation", foreign_keys=[location_id], back_populates="users")
 
     def __init__(
         self,
@@ -55,18 +47,34 @@ class DBUser(Base):
         self.status = status
         self.provider = provider
         self.hashed_otp = hashed_otp
-      
 
     @validator("status option")
     def validate_status(status, status_option):
         if status not in status_option:
             raise ValueError("Invalid status value")
 
-    
     @validator("role option")
     def validate_role(role, role_option):
         if role not in role_option:
             raise ValueError("Invalid role value")
+
+
+class DBLocation(Base):
+    __tablename__ = "locations"  # Fixed: was "DBLocations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    address = Column(String)
+    region = Column(String)
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    status = Column(String, default='active')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Fixed relationships with explicit foreign_keys
+    coops = relationship("DBCoops", back_populates="location")
+    manager = relationship("DBUser", foreign_keys=[manager_id], post_update=True)
+    users = relationship("DBUser", foreign_keys="DBUser.location_id", back_populates="location")
 
 
 class DBBlacklistedToken(Base):
@@ -106,7 +114,7 @@ class DBReset(Base):
         self.reset_code = reset_code
         self.status = status
         self.hashed_otp = hashed_otp
-    
+
 
 class DBCoops(Base):
     __tablename__ = "coop"
@@ -126,11 +134,15 @@ class DBCoops(Base):
     broken_eggs = Column(Integer, nullable=False, default=0)
     notes = Column(String, nullable=False)
     efficiency = Column(Float, nullable=False, default=0)
-
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    
+    # Fixed relationships
+    location = relationship("DBLocation", back_populates="coops")
+    user = relationship("DBUser", foreign_keys=[user_id])
+    # buyers = relationship("DBBuyer", back_populates="coop")  # Added relationship for buyers
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-
 
     def __init__(
         self,
@@ -178,12 +190,12 @@ class DBBuyer(Base):
     status_of_delivery = Column(String, default='pending')
     coop_id = Column(Integer, ForeignKey("coop.id"))
 
-    # coop = relationship("Coop", back_populates="buyers")
+    # Fixed relationship
+    # coop = relationship("DBCoops", back_populates="buyers")
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     by = Column(String, nullable=False)
-
 
     def __init__(
         self,
@@ -215,6 +227,9 @@ class DBExpenditure(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    # Added relationship
+    user = relationship("DBUser", foreign_keys=[user_id])
 
     def __init__(
         self,
