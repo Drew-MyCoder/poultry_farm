@@ -12,7 +12,6 @@ from jwt import PyJWTError, ExpiredSignatureError
 from pydantic import ValidationError
 from dotenv import load_dotenv
 from . import crud, model
-from api.auth import schema
 from database import get_db
 from sqlalchemy.orm import Session
 
@@ -25,6 +24,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = os.getenv("ALGORITHM", "")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRES_DAYS = 7
+
+# security = HTTPBearer()
+
+# Environment variable for production check
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -44,6 +48,9 @@ class NoMatchError(Exception):
 
 
 class CreationError(Exception):
+    pass
+
+class InvalidTokenError(Exception):
     pass
 
 
@@ -109,8 +116,8 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"}
     )
-    print("Request Header:", request.headers)
-    print(f"Received token: {token}")  # Debugging step
+    # print("Request Header:", request.headers)
+    # print(f"Received token: {token}")  # Debugging step
     
     if not token:
         print('No token received')
