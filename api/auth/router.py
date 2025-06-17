@@ -10,6 +10,18 @@ router = APIRouter(
 )
 
 
+@router.get("/me")
+async def get_current_user(current_user: model.DBUser = Depends(authutils.get_current_user)):
+    """Get current authenticated user information"""
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role,
+        "status": current_user.status
+    }
+
+
 @router.post("/auth/register")
 def register(user: schema.UserList, db=Depends(get_db)
 ) -> schema.User:
@@ -24,9 +36,9 @@ def register(user: schema.UserList, db=Depends(get_db)
             raise HTTPException(status_code=400, detail="Email already exists")
 
         # create new user
-        print(user.password, " this is password<<<<<<<")
+        # print(user.password, " this is password<<<<<<<")
         hashed_password = authutils.get_password_hash(user.password)
-        print(hashed_password, " this is hashed password<<<<<<<")
+        # print(hashed_password, " this is hashed password<<<<<<<")
 
         # user.hashed_password = hashed_password
         # db_user = crud.create_user(db=db, db_user=user)
@@ -103,12 +115,16 @@ async def verify_account_via_email(
 
         if not user:
             print("User not found:", verification_details.username) 
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
 
         user_is_verified = otp.verify_otp(
             entered_otp=verification_details.otp, user=user, db=db
         )
-        print("OTP verification result:", user_is_verified) 
-        print(user.username, '<<<<<<<<<<<<<')
+        # print("OTP verification result:", user_is_verified) 
+        # print(user.username, '<<<<<<<<<<<<<')
 
         if user_is_verified is False:
             raise HTTPException(400, "Invalid verification code")
@@ -116,7 +132,7 @@ async def verify_account_via_email(
         access_token_expires = timedelta(minutes=authutils.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = authutils.create_access_token(
             data={"sub": user.username, "roles": user.role},
-            # expires_delta=access_token_expires,
+            expires_delta=access_token_expires,
         )
         new_refresh_token = authutils.create_refresh_token(
             data={"sub": user.username}
@@ -137,25 +153,28 @@ async def verify_account_via_email(
             value=new_refresh_token,
             httponly=True,
             samesite="lax",
-            # secure=True, # Only send over HTTPS
-            # expires=timedelta(days=7), # Adjust expiration as needed    
+            secure=True if authutils.ENVIRONMENT == "production" else False, # Only send over HTTPS
+            expires=timedelta(days=7), # Adjust expiration as needed    
         )
 
         return response
     except crud.NotFoundError as e:
-        # raise HTTPException(
-        #     status_code=404,
-        #     detail="User verification failed",
-        # ) from e
-        print("Database error:", str(e))
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        # print("Database error:", str(e))
+        raise HTTPException(status_code=500, detail=f"Internal Server Error, /n{e}")
         
 
 
 @router.get("/refresh")
 async def refresh_access_token_endpoint(
-    refresh_token=Cookie(..., httponly=True), db=Depends(get_db)
+    refresh_token: str = Cookie(None, alias="refresh_token"), db=Depends(get_db)
 ):
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found"
+        )
+
     try:
         username = await authutils.validate_refresh_token(
             db=db, refresh_token=refresh_token
@@ -163,14 +182,17 @@ async def refresh_access_token_endpoint(
 
         user = crud.find_user_by_username(username=str(username), db=db)
 
-        # if user.role is None:
-        #     user.role = ["2001"] 
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
         role = user.role if user is not None else "feeder"
-            # to change role key later
 
         access_token = authutils.create_access_token({"sub": username, "roles": role})
-        print("this is the username >>>>>>>>>>", username)
-        print("this is the refresh token >>>>>>>>>>", access_token)
+        # print("this is the username >>>>>>>>>>", username)
+        # print("this is the refresh token >>>>>>>>>>", access_token)
 
         return {
             "access_token": access_token,
@@ -179,11 +201,28 @@ async def refresh_access_token_endpoint(
             "roles": role
         }
 
-    except crud.NotFoundError:
-        raise HTTPException(401, {"Invalid user"})
+    except (crud.NotFoundError, authutils.InvalidTokenError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
 
 
 @router.post("/logout")
-async def log_user_out(refresh_token=Cookie(..., httponly=True), db=Depends(get_db)):
-    authutils.blacklist_token(refresh_token, db=db)
-    return {"message": "Successfully logged out"}
+async def log_user_out(
+    refresh_token: str = Cookie(None, alias="refresh_token"), 
+    db=Depends(get_db)
+):
+    if refresh_token:
+        authutils.blacklist_token(refresh_token, db=db)
+    
+    response = JSONResponse(content={"message": "Successfully logged out"})
+    
+    # Clear the refresh token cookie
+    response.delete_cookie(
+        key="refresh_token",
+        httponly=True,
+        samesite="lax"
+    )
+    
+    return response
