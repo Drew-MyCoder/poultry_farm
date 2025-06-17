@@ -10,11 +10,19 @@ class ExpenditureCreate(ExpenditureBase):
     # id: int
     amount: int
     reference: str
+    category: str
+    status: str
+    approved_by: str
+    payment_method: str
+    location_id: int
 
 
-class ExpenditureUpdate(ExpenditureBase):
-    amount: int
+class ExpenditureUpdate(BaseModel):
+    payment_method: str
     reference: str
+    category: str
+    status: str
+    approved_by: str
 
 
 class Expenditure(BaseModel):
@@ -22,6 +30,10 @@ class Expenditure(BaseModel):
     user_id: int
     amount: int
     reference: str
+    category: str
+    status: str
+    approved_by: str
+    payment_method: str
 
 
 class ExpenditureOutput(BaseModel):
@@ -31,3 +43,7 @@ class ExpenditureOutput(BaseModel):
     reference: str
     created_at: datetime
     updated_at: datetime
+    category: str
+    status: str
+    approved_by: str
+    payment_method: str
