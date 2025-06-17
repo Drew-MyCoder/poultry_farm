@@ -21,6 +21,7 @@ class CoopCreate(BaseModel):
     collection_date: str
     efficiency: float
     egg_count: int
+    location_id: int
     # parent_id: int
 
 
@@ -45,6 +46,22 @@ class CoopUpdate(BaseModel):
     efficiency: float
     status: str
     collection_date: str
+
+
+class DailyCoopUpdate(BaseModel):
+    total_fowls: int
+    total_dead_fowls: int
+    total_feed: int
+    coop_name: str
+    egg_count: int
+    crates_collected: int
+    remainder_eggs: int
+    broken_eggs: int
+    notes: str
+    efficiency: float
+    status: str
+    collection_date: str
+    location_id: int
 
 
 class Coop(BaseModel):

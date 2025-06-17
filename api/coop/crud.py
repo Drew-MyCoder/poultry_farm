@@ -15,7 +15,7 @@ def read_coops(db):
     return db.query(model.DBCoops).all()
 
 
-def read_coop_by_id(coop_id: int, db):
+def read_coop_by_id(coop_id: int, db: Session):
     return db.query(model.DBCoops).filter(model.DBCoops.id == coop_id).first()
 
 
@@ -24,11 +24,15 @@ def read_coop_by_coop_name(coop_name: str, db):
     if coop is None:
         raise NotFoundError("coops not found")
 
-    return db.query(model.DBCoops).filter(model.DBCoops.coop_name == coop_name).first()
+    return coop
 
 
 def read_coop_by_version(coop_id: int, db):
     return db.query(model.DBCoops).filter(model.DBCoops.id == coop_id).first()
+
+
+def read_coops_by_location(location_id: int, db: Session):
+    return db.query(model.DBCoops).filter(model.DBCoops.location_id == location_id).all()
 
 
 def create_coop(db_coop: model.DBCoops, db):
@@ -64,11 +68,12 @@ def find_coop_by_user_id(user_id: int, db):
     if coop is None:
         raise NotFoundError("coop not found")
 
-    return db.query(model.DBCoops).filter(model.DBCoops.user_id == user_id).first()
+    return coop
 
 
 def find_coop_by_id(coop_id: int, db):
-    if db.query(model.DBCoops).filter(model.DBCoops.id == coop_id).first is None:
+    coop = db.query(model.DBCoops).filter(model.DBCoops.id == coop_id).first()
+    if coop is None:
         raise NotFoundError("Coop not found")
     
-    return db.query(model.DBCoops).filter(model.DBCoops.id == coop_id).first()
+    return coop

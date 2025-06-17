@@ -1,17 +1,17 @@
-from api.auth import model, utils
+from api.auth import model
 from api.coop import schema, crud
 from api.buyer.crud import NotFoundError, CreationError
-from api.user.crud import read_role
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 
 
 
 router = APIRouter(prefix="/coops", tags=["Coops"])
 
 
-@router.post("coop", response_model=schema.Coop)
+@router.post("/", response_model=schema.Coop)
 async def create_new_coop(
     coop_detail: schema.CoopCreate, db=Depends(get_db)
 ) -> schema.CoopCreate:
@@ -33,12 +33,13 @@ async def create_new_coop(
             notes=coop_detail.notes,
             efficiency=coop_detail.efficiency,
             egg_count=coop_detail.egg_count,
+            location_id=coop_detail.location_id,
         )
         
         add_new_coop = crud.create_coop(db_coop=new_coop, db=db)
         # return add_new_coop
-        print(add_new_coop.user_id, '<<<this is the user id')
-        print(add_new_coop.id, '<<<this is the id')
+        # print(add_new_coop.user_id, '<<<this is the user id')
+        # print(add_new_coop.id, '<<<this is the id')
 
         return{
             "user_id": add_new_coop.user_id,
@@ -58,7 +59,9 @@ async def create_new_coop(
         }
 
     except CreationError as err:
-        raise HTTPException(500, err)
+        raise HTTPException(status_code=500, detail=str(err))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
 @router.get("/",)
@@ -67,14 +70,26 @@ async def get_all_coops(db=Depends(get_db)) -> list[schema.CoopOutput]:
         return crud.read_coops(db)
     except NotFoundError as e:
         raise HTTPException(e, "there are no coops to display")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
-@router.get("/{id: int}")
-async def get_coop_by_id(id: int, db=Depends(get_db)):
+
+@router.get("/{coop_id: int}", response_model=schema.CoopOutput)
+async def get_coop_by_id(coop_id: int, db=Depends(get_db)):
+    # try:
+    #     return crud.read_coop_by_id(id, db=db)
+    # except NotFoundError as e:
+    #     raise HTTPException(e, "coop does not exist")
     try:
-        return crud.read_coop_by_id(id, db=db)
-    except NotFoundError as e:
-        raise HTTPException(e, "coop does not exist")
+        coop = crud.read_coop_by_id(coop_id, db)
+        if coop is None:
+            raise HTTPException(status_code=404, detail="coop not found")
+        return coop
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="coop with this id does not exist")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving coop: {str(e)}")
 
 
 @router.get("/{coop_name: str}/history", response_model=list[schema.CoopUpdate])
@@ -83,26 +98,36 @@ async def get_coop_by_coop_name(coop_name: str, db=Depends(get_db)):
         return crud.read_coop_by_coop_name(coop_name, db=db)
     except NotFoundError as e:
         raise HTTPException(e, "coop does not exist")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving coop: {str(e)}")
 
 
-@router.delete("/{id: int}")
-async def delete_coop_by_id(id: int, db=Depends(get_db)):
+
+@router.delete("/{coop_id: int}")
+async def delete_coop_by_id(coop_id: int, db=Depends(get_db)):
     try:
-        wallet = crud.find_coop_by_id(coop_id=id, db=db)
-        if wallet is None:
-            raise NotFoundError('coop you are trying to delete does not exist')
-        return crud.delete_coop(coop_id=id, db=db)
+        coop = crud.find_coop_by_id(coop_id, db=db)
+    #     if coop is None:
+    #         raise NotFoundError('coop you are trying to delete does not exist')
+    #     return crud.delete_coop(coop_id=id, db=db)
+    # except NotFoundError:
+    #     raise HTTPException(
+    #         404, "coop with this id does not exist"
+        if coop:
+            return crud.delete_coop(coop_id, db)
     except NotFoundError:
-        raise HTTPException(
-            404, "coop with this id does not exist")
+        raise HTTPException(status_code=404, detail="coop with this id does not exist")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting coop: {str(e)}")
 
 
-@router.patch("/{id: int}", response_model=schema.CoopUpdate)
+
+@router.patch("/{coop_id: int}", response_model=schema.CoopUpdate)
 async def daily_coop_update_by_id(
-    id: int, update_coop: schema.CoopUpdate, db=Depends(get_db)
+    coop_id: int, update_coop: schema.CoopUpdate, db=Depends(get_db)
 ):
     try:
-        coop = crud.find_coop_by_id(coop_id=id, db=db)
+        coop = crud.find_coop_by_id(coop_id, db=db)
         print(coop, '<<<<this is the coop')
         if update_coop.total_fowls:
             coop.total_fowls = update_coop.total_fowls
@@ -125,19 +150,21 @@ async def daily_coop_update_by_id(
         if update_coop.efficiency:
             coop.efficiency = update_coop.efficiency
 
+        return crud.update_coop(db_coop=coop, db=db)
+
     except NotFoundError:
         raise HTTPException(
             404, "coop with this id cannot be updated"
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating coop: {str(e)}")
 
-    return crud.update_coop(db_coop=coop, db=db)
 
-
-@router.patch("/{id}", response_model=schema.CoopUpdate)
-async def update_coop(id: int, coop_update: schema.CoopUpdate, db: Session = Depends(get_db)):
+@router.patch("/{coop_id}", response_model=schema.CoopUpdate)
+async def update_coop(coop_id: int, coop_update: schema.DailyCoopUpdate, db: Session = Depends(get_db)):
     try:
         # fetch existing record
-        existing_coop = crud.read_coop_by_id(coop_id=id, db=db)
+        existing_coop = crud.read_coop_by_id(coop_id, db=db)
 
         if not existing_coop:
             raise HTTPException(
@@ -161,6 +188,7 @@ async def update_coop(id: int, coop_update: schema.CoopUpdate, db: Session = Dep
             broken_eggs=coop_update.broken_eggs,
             notes=coop_update.notes,
             efficiency=coop_update.efficiency,
+            location_id=coop_update.location_id,
         )
 
         add_coop_update = crud.create_coop(db_coop=new_coop, db=db)
@@ -168,6 +196,9 @@ async def update_coop(id: int, coop_update: schema.CoopUpdate, db: Session = Dep
         return add_coop_update
     except CreationError as err:
         raise HTTPException(500, err)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating coop: {str(e)}")
+
 
 
 @router.post("/{id}/rollback", response_model=schema.CoopUpdate)
@@ -220,3 +251,18 @@ async def rollback_coop(id: int, db: Session = Depends(get_db)):
 
     except CreationError as err:
         raise HTTPException(500, err)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error rolling back coop: {str(e)}")
+
+
+@router.get("/location/{location_id}", response_model=List[schema.CoopOutput])
+async def get_coops_by_location(location_id: int, db=Depends(get_db)):
+    try:
+        coop = crud.read_coops_by_location(location_id, db)
+        if not coop:
+            raise HTTPException(status_code=404, detail="No coop found for this location")
+        return coop
+    except NotFoundError:
+        raise HTTPException(status_code=404, detail="Coop with this location does not exist")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving coop: {str(e)}")
