@@ -9,11 +9,12 @@ class BuyerBase(BaseModel):
 
 class BuyerCreate(BaseModel):
     name: str
-    date_of_delivery: datetime
+    date_of_delivery: date
     crates_desired: int
     amount: int
     status_of_delivery: str
     by: str
+    location_id: int
 
 
 class BuyerUpdate(BaseModel):
