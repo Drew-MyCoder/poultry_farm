@@ -1,7 +1,6 @@
-from sqlalchemy import Column, String, Integer, Enum, DateTime, ForeignKey, Float
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from base import Base
-import enum
 from datetime import datetime, timezone
 from pydantic import validator
 
@@ -60,7 +59,7 @@ class DBUser(Base):
 
 
 class DBLocation(Base):
-    __tablename__ = "locations"  # Fixed: was "DBLocations"
+    __tablename__ = "locations"
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
@@ -75,6 +74,8 @@ class DBLocation(Base):
     coops = relationship("DBCoops", back_populates="location")
     manager = relationship("DBUser", foreign_keys=[manager_id], post_update=True)
     users = relationship("DBUser", foreign_keys="DBUser.location_id", back_populates="location")
+    buyers = relationship("DBBuyer", back_populates="location")
+    expenditures = relationship("DBExpenditure", back_populates="location")
 
 
 class DBBlacklistedToken(Base):
@@ -160,7 +161,8 @@ class DBCoops(Base):
         remainder_eggs: int | None = None,
         broken_eggs: int | None = None,
         notes: str | None = None,
-        efficiency: float | None = None
+        efficiency: float | None = None,
+        location_id: int | None = None,
     ):
         self.id = id
         self.parent_id = parent_id
@@ -177,6 +179,7 @@ class DBCoops(Base):
         self.broken_eggs = broken_eggs
         self.notes = notes
         self.efficiency = efficiency
+        self.location_id = location_id
 
 
 class DBBuyer(Base):
@@ -189,9 +192,11 @@ class DBBuyer(Base):
     amount = Column(Integer, nullable=False)
     status_of_delivery = Column(String, default='pending')
     coop_id = Column(Integer, ForeignKey("coop.id"))
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
 
     # Fixed relationship
     # coop = relationship("DBCoops", back_populates="buyers")
+    location = relationship("DBLocation", back_populates="buyers")
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -207,6 +212,7 @@ class DBBuyer(Base):
         status_of_delivery: str | None = None,
         coop_id: int | None = None,
         by: str | None = None,
+        location_id: int | None = None,
     ):
         self.id = id
         self.name = name
@@ -216,6 +222,7 @@ class DBBuyer(Base):
         self.status_of_delivery = status_of_delivery
         self.coop_id = coop_id
         self.by = by
+        self.location_id = location_id 
 
 
 class DBExpenditure(Base):
@@ -223,13 +230,19 @@ class DBExpenditure(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     amount = Column(Integer, nullable=False)
-    reference = Column(String, nullable=False)
+    reference = Column(String, nullable=False) #reference is description on front end
+    category = Column(String, nullable=False)
+    payment_method = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    approved_by = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Added relationship
     user = relationship("DBUser", foreign_keys=[user_id])
+    location = relationship("DBLocation", back_populates="expenditures")
 
     def __init__(
         self,
@@ -237,8 +250,18 @@ class DBExpenditure(Base):
         amount: int | None = None,
         reference: str | None = None,
         user_id: int | None = None,
+        location_id: int | None = None,
+        category: str | None = None,
+        payment_method: str | None = None,
+        status: str | None = None,
+        approved_by: str | None = None,
     ):
         self.id = id
         self.amount = amount
         self.reference = reference
         self.user_id = user_id
+        self.location_id = location_id
+        self.category = category
+        self.payment_method = payment_method
+        self.status = status
+        self.approved_by = approved_by
