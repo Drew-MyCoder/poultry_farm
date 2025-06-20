@@ -8,15 +8,21 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status, Request
-from jwt import PyJWTError, ExpiredSignatureError
-from pydantic import ValidationError
+from jwt import ExpiredSignatureError
 from dotenv import load_dotenv
 from . import crud, model
 from database import get_db
 from sqlalchemy.orm import Session
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 load_dotenv()
+
+security = HTTPBearer()
 
 
 # security settings
@@ -63,20 +69,6 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-# def create_access_token(data: dict, expires_delta: timedelta | None = None):
-#     to_encode = data.copy()
-#     if not expires_delta:
-#         expires_delta = timedelta(minutes=15)
-
-#     expire: datetime = datetime.now(UTC) + expires_delta
-
-#     to_encode.update({"exp": expire})
-#     to_encode.update({"jti": str(uuid.uuid4())})
-
-#     encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-#     return encode_jwt
-
 def create_access_token(data: dict):
     to_encode = data.copy()
     
@@ -95,73 +87,60 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# In login route
-# access_token = create_access_token({
-#     "email": user.email,
-#     "sub": user.email,  # Explicitly set sub to email
-#     "role": user.role
-# })
-
 
 def get_user_token(token: str = Depends(oauth2_scheme)):
     return token
 
-
-async def get_current_user( 
-    request: Request, 
-    token: str = Depends(oauth2_scheme), 
-    db: Session = Depends(get_db) ):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db=Depends(get_db)
+) -> model.DBUser:
+    """
+    Dependency to get current authenticated user from access token
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"}
+        headers={"WWW-Authenticate": "Bearer"},
     )
-    # print("Request Header:", request.headers)
-    # print(f"Received token: {token}")  # Debugging step
     
-    if not token:
-        print('No token received')
-        raise credentials_exception
-    print(f'received token: {token}')
-
     try:
-        print(f'Received token: {token}')
+        token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        print('Decoded payload: ', payload)
         username: str = payload.get("sub")
-        role: str = payload.get("role")
-        if username is None or role is None:
+        if username is None:
             raise credentials_exception
-        user = crud.find_user_by_email(db=db, email=username)
-        if user is None:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        return user  # ✅ Return the user object
-        # return {"username": username, "role": role}
-    except JWTError as e:
-        print('jwt decoding failed: ', str(e))
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
-
-        # # check blacklist token
-        # blacklist_token = await crud.find_blaclist_token(token)
-        # if blacklist_token:
-        #     raise credentials_exception
-
-        # # check if user exist
-        # result = await crud.find_exist_user(username)
-        # if not result:
-        #     raise HTTPException(
-        #         status_code=status.HTTP_404_NOT_FOUND,
-        #         detail="User not registered."
-        #     )
-        # return schema.UserList(**result)
-    
-
-    except (PyJWTError, ValidationError):
+    except JWTError:
         raise credentials_exception
+    
+    user = crud.find_user_by_username(username=username, db=db)
+    if user is None:
+        raise credentials_exception
+    
+    return user
+
+async def get_current_active_user(
+    current_user: model.DBUser = Depends(get_current_user)
+) -> model.DBUser:
+    """
+    Dependency to get current active user
+    """
+    if current_user.status != "active":
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+def require_role(required_role: str):
+    """
+    Dependency factory to require specific user role
+    """
+    def role_checker(current_user: model.DBUser = Depends(get_current_active_user)):
+        if current_user.role != required_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions"
+            )
+        return current_user
+    return role_checker
 
 
 def login_for_access_token(user):
@@ -173,17 +152,6 @@ def login_for_access_token(user):
         )
     access_token = create_access_token(data={"sub": user.username, "role": user.role.value})
     return {"access_token": access_token, "token_type": "bearer"}
-
-
-def role_required(required_role: model.DBUser.role):
-    def role_dependency(current_user: dict = Depends(get_current_user)):
-        if current_user["role"] != required_role.value:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions",
-            )
-        return current_user
-    return role_dependency
 
 
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
@@ -270,3 +238,144 @@ def blacklist_token(token: str, db=Depends(get_db)):
         crud.revoke_jti(db_jti=db_jti, db=db)
     except JWTError:
         raise credentials_exception
+
+
+class LoginSecurityManager:
+    def __init__(
+        self,
+        max_attempts: int = 5,
+        lockout_duration_minutes: int = 15,
+        attempt_window_minutes: int = 60
+    ):
+        self.max_attempts = max_attempts
+        self.lockout_duration_minutes = lockout_duration_minutes
+        self.attempt_window_minutes = attempt_window_minutes
+    
+    def check_account_status(self, db: Session, username: str) -> dict:
+        """
+        Check if account can attempt login
+        Returns dict with status info
+        """
+        # Clean up expired lockouts first
+        crud.LoginAttemptsCRUD.cleanup_expired_lockouts(db)
+        
+        # Check if account is currently locked
+        is_locked, lockout = crud.LoginAttemptsCRUD.is_account_locked(db, username)
+        
+        if is_locked and lockout:
+            remaining_time = lockout.unlock_at - datetime.utcnow()
+            remaining_minutes = int(remaining_time.total_seconds() / 60)
+            
+            return {
+                "can_attempt": False,
+                "is_locked": True,
+                "unlock_at": lockout.unlock_at,
+                "remaining_minutes": max(0, remaining_minutes),
+                "failed_attempts": lockout.failed_attempts
+            }
+        
+        # Check recent failed attempts
+        since = datetime.utcnow() - timedelta(minutes=self.attempt_window_minutes)
+        failed_count = crud.LoginAttemptsCRUD.get_failed_attempts_count(db, username, since)
+        
+        return {
+            "can_attempt": failed_count < self.max_attempts,
+            "is_locked": False,
+            "failed_attempts": failed_count,
+            "attempts_remaining": max(0, self.max_attempts - failed_count)
+        }
+    
+    def record_failed_attempt(
+        self,
+        db: Session,
+        username: str,
+        request: Optional[Request] = None,
+        failure_reason: str = "Invalid credentials"
+    ):
+        """Record a failed login attempt and lock account if necessary"""
+        ip_address = None
+        user_agent = None
+        
+        if request:
+            ip_address = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+        
+        # Record the attempt
+        crud.LoginAttemptsCRUD.record_login_attempt(
+            db=db,
+            username=username,
+            success=False,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            failure_reason=failure_reason
+        )
+        
+        # Check if we need to lock the account
+        since = datetime.utcnow() - timedelta(minutes=self.attempt_window_minutes)
+        failed_count = crud.LoginAttemptsCRUD.get_failed_attempts_count(db, username, since)
+        
+        if failed_count >= self.max_attempts:
+            crud.LoginAttemptsCRUD.lock_account(
+                db=db,
+                username=username,
+                lockout_duration_minutes=self.lockout_duration_minutes,
+                failed_attempts=failed_count
+            )
+            
+            logger.warning(
+                f"Account locked due to {failed_count} failed attempts: {username}"
+            )
+            
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Account locked due to too many failed attempts. "
+                       f"Try again in {self.lockout_duration_minutes} minutes."
+            )
+        
+        return {
+            "failed_attempts": failed_count,
+            "attempts_remaining": self.max_attempts - failed_count
+        }
+    
+    def record_successful_attempt(
+        self,
+        db: Session,
+        username: str,
+        request: Optional[Request] = None
+    ):
+        """Record a successful login attempt and reset failed attempts"""
+        ip_address = None
+        user_agent = None
+        
+        if request:
+            ip_address = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+        
+        # Record successful attempt
+        crud.LoginAttemptsCRUD.record_login_attempt(
+            db=db,
+            username=username,
+            success=True,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+        
+        # Reset failed attempts
+        crud.LoginAttemptsCRUD.reset_failed_attempts(db, username)
+    
+    def validate_can_attempt_login(self, db: Session, username: str):
+        """Validate if user can attempt login, raise exception if not"""
+        status = self.check_account_status(db, username)
+        
+        if not status["can_attempt"]:
+            if status["is_locked"]:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Account is locked. Try again in {status['remaining_minutes']} minutes."
+                )
+            else:
+                remaining = status.get("attempts_remaining", 0)
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Too many failed attempts. {remaining} attempts remaining."
+                )
