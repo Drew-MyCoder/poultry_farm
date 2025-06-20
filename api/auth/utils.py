@@ -1,21 +1,9 @@
 from fastapi import HTTPException
-from database import get_db
-from api.coop import (
-    schema as coop_schema,
-    crud as coop_crud
-)
 from api.auth import (
-    schema as auth_schema,
-    crud as auth_crud,
     model
 )
 from api.buyer import (
-    schema as buyer_schema,
     crud as buyer_crud
-)
-from api.expenditure import(
-    schema as expenditure_schema,
-    crud as expenditure_crud
 )
 from api.user import (
     crud as user_crud
