@@ -1,11 +1,12 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from base import Base
 from datetime import datetime, timezone
 from pydantic import validator
 
 status_option = ['active', 'inactive', 'suspended']
-role_option = ['admin', 'feeder', 'counter']
+role_option = ['admin', 'feeder', 'manager']
 status_of_delivery = ["pending", "delivered", "cancelled", "progress"]
 
 
@@ -26,6 +27,11 @@ class DBUser(Base):
     
     # Fixed relationship with explicit foreign_keys
     location = relationship("DBLocation", foreign_keys=[location_id], back_populates="users")
+
+    @hybrid_property
+    def location_name(self):
+        """"Get the location name from the related location"""
+        return self.location.name if self.location else None
 
     def __init__(
         self,
@@ -56,6 +62,29 @@ class DBUser(Base):
     def validate_role(role, role_option):
         if role not in role_option:
             raise ValueError("Invalid role value")
+
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, index=True, nullable=False)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    attempt_time = Column(DateTime, default=datetime.utcnow)
+    success = Column(Boolean, default=False)
+    failure_reason = Column(String, nullable=True)
+    
+
+class AccountLockout(Base):
+    __tablename__ = "account_lockouts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    locked_at = Column(DateTime, default=datetime.utcnow)
+    unlock_at = Column(DateTime, nullable=False)
+    failed_attempts = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
 
 
 class DBLocation(Base):
