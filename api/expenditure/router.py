@@ -48,7 +48,7 @@ async def get_all_expenditures(db=Depends(get_db)):
     try:
         expenditures = crud.read_expenditures(db)
         if not expenditures:
-            raise HTTPException(status_code=404, detail="No expenditures found")
+            return []
         return expenditures
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving expenditures: {str(e)}")

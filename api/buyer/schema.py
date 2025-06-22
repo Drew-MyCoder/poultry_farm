@@ -30,7 +30,7 @@ class BuyerUpdate(BaseModel):
 class Buyer(BaseModel):
     id: int
     name: str
-    date_of_delivery: date
+    date_of_delivery: datetime
     crates_desired: int
     amount: int
     status_of_delivery: str

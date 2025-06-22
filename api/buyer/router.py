@@ -59,7 +59,7 @@ async def get_all_buyers(db=Depends(get_db)):
     try:
         buyer = crud.read_buyers(db)
         if not buyer:
-            raise HTTPException(status_code=404, detail="No buyer found")
+            return []
         return buyer
     except NotFoundError as e:
         raise HTTPException(500, detail=f"Unexpected error: {str(e)}")

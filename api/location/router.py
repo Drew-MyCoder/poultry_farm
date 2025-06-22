@@ -190,7 +190,7 @@ def assign_user_to_location(
     
     return UserAssignmentResponse(
         user=UserInLocation.model_validate(user),
-        message=f"User successfully assigned to location"
+        message="User successfully assigned to location"
     )
 
 
