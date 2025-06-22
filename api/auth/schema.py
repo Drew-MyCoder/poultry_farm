@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional
 from datetime import datetime
 
@@ -73,6 +73,22 @@ class UserReturn(BaseModel):
     updated_at: datetime
     role: str   
     password: str
+    location_id:Optional[int]
+    location: Optional[str] = None
+    
+    @validator('location', pre=True)
+    def extract_location_name(cls, v):
+        """Extract location name from location object or return None"""
+        if v is None:
+            return None
+        if hasattr(v, 'name'):
+            return v.name
+        if isinstance(v, str):
+            return v
+        return str(v)
+    
+    class Config:
+        from_attributes = True
 
 
 class UserUpdate(BaseModel):

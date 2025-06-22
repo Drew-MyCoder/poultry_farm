@@ -245,6 +245,8 @@ async def verify_account_via_email(
             "roles": user.role,
             "access_token": access_token,
             "user_id": user.id,
+            "location_name": user.location_name,
+            "location_id": user.location_id,
         }
         
         response = JSONResponse(content=response_data)
